@@ -19,7 +19,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const [remaining, setRemaining] = useState(timerSet.timers[0]?.durationSec ?? 0);
   const [running, setRunning] = useState(false);
   const [startedHistoryId, setStartedHistoryId] = useState<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timer | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
 
   const totalCount = timerSet.timers.length;
@@ -64,7 +64,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
           title: 'タイマー終了',
           body: `${current?.label ?? 'タイマー'} が終了しました`,
         },
-        trigger: { seconds: sec }
+        trigger: { seconds: sec, type: Notifications.TriggerType.TIME_INTERVAL }
       });
     } catch(e) {
       console.warn('Notification schedule failed', e);
