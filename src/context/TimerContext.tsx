@@ -1,6 +1,6 @@
 import React, {createContext, useContext, useEffect, useReducer} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
+import { uuidv4 } from '../utils/uuid';
 import dayjs from 'dayjs';
 
 export type Timer = {

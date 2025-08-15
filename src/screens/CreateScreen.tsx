@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert } from 
 import { Colors } from '../constants/colors';
 import TimerItemForm from '../components/TimerItemForm';
 import { useTimerState } from '../context/TimerContext';
-import { v4 as uuidv4 } from 'uuid';
+import { uuidv4 } from '../utils/uuid';
 
 export default function CreateScreen() {
   const { dispatch } = useTimerState();
