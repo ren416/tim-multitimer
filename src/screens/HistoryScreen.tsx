@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
-import * as FileSystem from 'expo-file-system';
+import quotes from '../../assets/data/quotes.json';
 import { VictoryBar, VictoryChart, VictoryAxis } from 'victory-native';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -16,17 +16,11 @@ export default function HistoryScreen() {
   const [quote, setQuote] = useState<string>('');
 
   useEffect(() => {
-    (async () => {
-      try {
-        const content = await FileSystem.readAsStringAsync(
-          FileSystem.asset('assets/data/quotes.json')
-        );
-        const arr = JSON.parse(content);
-        setQuote(arr[Math.floor(Math.random()*arr.length)]);
-      } catch(e) {
-        setQuote('継続は力なり。— 日本のことわざ');
-      }
-    })();
+    try {
+      setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+    } catch (e) {
+      setQuote('継続は力なり。— 日本のことわざ');
+    }
   }, []);
 
   const data = useMemo(() => {

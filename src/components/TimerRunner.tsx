@@ -64,7 +64,10 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
           title: 'タイマー終了',
           body: `${current?.label ?? 'タイマー'} が終了しました`,
         },
-        trigger: { seconds: sec }
+        trigger: {
+          seconds: sec,
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        }
       });
     } catch(e) {
       console.warn('Notification schedule failed', e);
