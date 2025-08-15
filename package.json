@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@types/react": "~18.2.45",
-    "typescript": "~5.3.3"
+    "typescript": "~5.3.3",
+    "expo-module-scripts": "^3.0.0"
   }
 }
