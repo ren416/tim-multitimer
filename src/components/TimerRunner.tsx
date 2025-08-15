@@ -1,0 +1,171 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { TimerSet } from '../context/TimerContext';
+import { Colors } from '../constants/colors';
+import { formatHMS } from '../utils/format';
+import * as Notifications from 'expo-notifications';
+import { Audio } from 'expo-av';
+import { useTimerState } from '../context/TimerContext';
+
+type Props = {
+  timerSet: TimerSet;
+  onFinish?: () => void;
+  onCancel?: () => void;
+};
+
+export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
+  const { dispatch } = useTimerState();
+  const [index, setIndex] = useState(0);
+  const [remaining, setRemaining] = useState(timerSet.timers[0]?.durationSec ?? 0);
+  const [running, setRunning] = useState(false);
+  const [startedHistoryId, setStartedHistoryId] = useState<string | null>(null);
+  const intervalRef = useRef<NodeJS.Timer | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  const totalCount = timerSet.timers.length;
+  const current = timerSet.timers[index];
+
+  useEffect(() => {
+    if (!startedHistoryId) {
+      dispatch({ type: 'LOG_START', payload: { timerSetId: timerSet.id } });
+      setStartedHistoryId('temp'); // just a flag; reducer generates id but we don't need it for now
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      unloadSound();
+    };
+  }, []);
+
+  const loadSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(require('../../assets/sounds/beep.wav'));
+      soundRef.current = sound;
+    } catch(e) {
+      console.warn('Failed to load sound', e);
+    }
+  };
+
+  const unloadSound = async () => {
+    try { await soundRef.current?.unloadAsync(); } catch {}
+  };
+
+  useEffect(() => {
+    loadSound();
+  }, []);
+
+  const scheduleEndNotification = async (sec: number) => {
+    try {
+      await Notifications.requestPermissionsAsync();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'タイマー終了',
+          body: `${current?.label ?? 'タイマー'} が終了しました`,
+        },
+        trigger: { seconds: sec }
+      });
+    } catch(e) {
+      console.warn('Notification schedule failed', e);
+    }
+  };
+
+  const start = () => {
+    if (!current) return;
+    setRunning(true);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setRemaining((r) => {
+        if (r <= 1) {
+          clearInterval(intervalRef.current!);
+          endOne();
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    scheduleEndNotification(remaining);
+  };
+
+  const pause = () => {
+    setRunning(false);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  };
+
+  const resetCurrent = () => {
+    if (!current) return;
+    setRemaining(current.durationSec);
+  };
+
+  const endOne = async () => {
+    try { await soundRef.current?.replayAsync(); } catch {}
+    if (index + 1 < totalCount) {
+      setIndex(i => i + 1);
+      setRemaining(timerSet.timers[index + 1].durationSec);
+      setRunning(false);
+      // auto start next
+      setTimeout(() => start(), 500);
+    } else {
+      setRunning(false);
+      onFinish?.();
+    }
+  };
+
+  const skip = () => {
+    if (index + 1 < totalCount) {
+      setIndex(i => i + 1);
+      setRemaining(timerSet.timers[index + 1].durationSec);
+    } else {
+      onFinish?.();
+    }
+  };
+
+  const cancel = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setRunning(false);
+    onCancel?.();
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.name}>{timerSet.name}</Text>
+      <Text style={styles.currentLabel}>{current?.label ?? '—'}</Text>
+      <Text style={styles.time}>{formatHMS(remaining)}</Text>
+
+      <View style={styles.controls}>
+        {!running ? (
+          <Pressable onPress={start} style={[styles.btn, styles.primary]}>
+            <Text style={styles.btnText}>開始</Text>
+          </Pressable>
+        ) : (
+          <Pressable onPress={pause} style={[styles.btn, styles.secondary]}>
+            <Text style={styles.btnText}>一時停止</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={skip} style={[styles.btn, styles.secondary]}>
+          <Text style={styles.btnText}>スキップ</Text>
+        </Pressable>
+        <Pressable onPress={cancel} style={[styles.btn, styles.danger]}>
+          <Text style={styles.btnText}>中止</Text>
+        </Pressable>
+      </View>
+
+      <Text style={styles.progress}>{index + 1} / {totalCount}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { alignItems: 'center', padding: 20 },
+  name: { fontSize: 20, fontWeight: '700', color: Colors.text },
+  currentLabel: { marginTop: 12, fontSize: 16, color: Colors.subText },
+  time: { fontSize: 72, fontWeight: '800', color: Colors.primaryDark, marginVertical: 20 },
+  controls: { flexDirection: 'row', gap: 12 },
+  btn: { paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12 },
+  primary: { backgroundColor: Colors.primary },
+  secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
+  danger: { backgroundColor: Colors.danger },
+  btnText: { color: '#0B1D2A', fontWeight: '700' },
+  progress: { marginTop: 10, color: Colors.subText }
+});
