@@ -1,100 +1,266 @@
-import React, { useMemo, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, TextInput, Alert, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Pressable,
+  Alert,
+  Switch,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
 
+type Stage =
+  | 'choose'
+  | 'newInfo'
+  | 'newTimers'
+  | 'selectExisting'
+  | 'existingTimers';
+
+type TimerInput = { id?: string; label?: string; min: string; sec: string };
+
 export default function CreateScreen() {
   const { state, dispatch } = useTimerState();
-  const [label, setLabel] = useState('');
-  const [min, setMin] = useState('');
-  const [selectedId, setSelectedId] = useState(state.timerSets[0]?.id ?? '');
 
-  const selectedSet = useMemo(
-    () => state.timerSets.find(s => s.id === selectedId) ?? null,
-    [selectedId, state.timerSets]
-  );
+  const [stage, setStage] = useState<Stage>('choose');
+  const [setName, setSetName] = useState('');
+  const [notify, setNotify] = useState(false);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [selectedId, setSelectedId] = useState('');
+  const [timers, setTimers] = useState<TimerInput[]>([]);
 
-  const cycleSet = () => {
-    if (state.timerSets.length === 0) return;
-    const idx = state.timerSets.findIndex(s => s.id === selectedId);
-    const next = state.timerSets[(idx + 1) % state.timerSets.length];
-    setSelectedId(next.id);
+  const reset = () => {
+    setStage('choose');
+    setSetName('');
+    setNotify(false);
+    setStartTime('');
+    setEndTime('');
+    setSelectedId('');
+    setTimers([]);
   };
 
-  const addToSet = () => {
-    const m = parseInt(min || '0', 10);
-    if (!label.trim() || m <= 0 || !selectedSet) {
-      Alert.alert('追加できません', '名前と時間を入力し、タイマーセットを選択してください。');
+  const toNewInfo = () => {
+    reset();
+    setStage('newInfo');
+  };
+
+  const toSelectExisting = () => {
+    reset();
+    setStage('selectExisting');
+  };
+
+  const startNewTimers = () => {
+    if (!setName.trim()) {
+      Alert.alert('作成できません', 'セット名を入力してください。');
       return;
     }
-    const timer = { id: uuidv4(), label, durationSec: m * 60 };
-    const updated = { ...selectedSet, timers: [...selectedSet.timers, timer] };
-    dispatch({ type: 'UPDATE_SET', payload: updated });
-    setLabel('');
-    setMin('');
-    Alert.alert('追加しました', `${selectedSet.name} にタイマーを追加しました。`);
+    setTimers([{ min: '', sec: '' }]);
+    setStage('newTimers');
   };
 
-  const createSet = () => {
-    const m = parseInt(min || '0', 10);
-    if (!label.trim() || m <= 0) {
-      Alert.alert('作成できません', '名前と時間を入力してください。');
+  const selectExisting = (id: string) => {
+    const set = state.timerSets.find(s => s.id === id);
+    if (!set) return;
+    setSelectedId(id);
+    setTimers(
+      set.timers.map(t => ({
+        id: t.id,
+        label: t.label,
+        min: String(Math.floor(t.durationSec / 60)),
+        sec: String(t.durationSec % 60).padStart(2, '0'),
+      }))
+    );
+    setStage('existingTimers');
+  };
+
+  const updateTimer = (index: number, field: 'min' | 'sec', value: string) => {
+    setTimers(prev => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
+  };
+
+  const addTimerRow = () => setTimers(prev => [...prev, { min: '', sec: '' }]);
+
+  const saveNew = () => {
+    const parsed = timers
+      .map((t, i) => {
+        const m = parseInt(t.min || '0', 10);
+        const s = parseInt(t.sec || '0', 10);
+        const total = m * 60 + s;
+        if (total <= 0) return null;
+        return { id: uuidv4(), label: t.label || `タイマー${i + 1}`, durationSec: total };
+      })
+      .filter(Boolean);
+    if (parsed.length === 0) {
+      Alert.alert('作成できません', 'タイマーを入力してください。');
       return;
     }
     dispatch({
       type: 'ADD_SET',
       payload: {
-        name: label || '新しいタイマーセット',
+        name: setName,
         description: '',
-        timers: [{ id: uuidv4(), label, durationSec: m * 60 }],
+        timers: parsed as any,
         sound: 'beep',
+        notifications: notify ? { enabled: true, start: startTime, end: endTime } : { enabled: false },
       },
     });
-    setLabel('');
-    setMin('');
     Alert.alert('作成しました', '新しいタイマーセットを作成しました。');
+    reset();
   };
+
+  const saveExisting = () => {
+    const target = state.timerSets.find(s => s.id === selectedId);
+    if (!target) return;
+    const parsed = timers
+      .map((t, i) => {
+        const m = parseInt(t.min || '0', 10);
+        const s = parseInt(t.sec || '0', 10);
+        const total = m * 60 + s;
+        if (total <= 0) return null;
+        return {
+          id: t.id || uuidv4(),
+          label: t.label || `タイマー${i + 1}`,
+          durationSec: total,
+        };
+      })
+      .filter(Boolean);
+    if (parsed.length === 0) {
+      Alert.alert('更新できません', 'タイマーを入力してください。');
+      return;
+    }
+    const updated = { ...target, timers: parsed as any };
+    dispatch({ type: 'UPDATE_SET', payload: updated });
+    Alert.alert('更新しました', `${target.name} を更新しました。`);
+    reset();
+  };
+
+  const renderTimerRows = () => (
+    <View>
+      {timers.map((t, idx) => (
+        <View key={idx} style={styles.timerRow}>
+          <Text style={styles.timerLabel}>{`タイマー${idx + 1}`}</Text>
+          <TextInput
+            value={t.min}
+            onChangeText={v => updateTimer(idx, 'min', v)}
+            placeholder="分"
+            keyboardType="number-pad"
+            style={[styles.timerInput, { marginRight: 4 }]}
+          />
+          <Text style={{ alignSelf: 'center' }}>:</Text>
+          <TextInput
+            value={t.sec}
+            onChangeText={v => updateTimer(idx, 'sec', v)}
+            placeholder="秒"
+            keyboardType="number-pad"
+            style={[styles.timerInput, { marginLeft: 4 }]}
+          />
+        </View>
+      ))}
+      <Pressable onPress={addTimerRow} style={styles.addIcon}>
+        <Ionicons name="add-circle-outline" size={36} color={Colors.primary} />
+      </Pressable>
+    </View>
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>新しいタイマーを追加</Text>
-      <TextInput
-        value={label}
-        onChangeText={setLabel}
-        placeholder="例: 勉強"
-        style={styles.input}
-      />
-      <TextInput
-        value={min}
-        onChangeText={setMin}
-        placeholder="例: 25"
-        keyboardType="number-pad"
-        style={styles.input}
-      />
+      {stage === 'choose' && (
+        <View style={{ gap: 12 }}>
+          <IconButton
+            label="新しいタイマーセットを追加する"
+            icon="add-circle-outline"
+            onPress={toNewInfo}
+            style={{ alignSelf: 'stretch' }}
+          />
+          <IconButton
+            label="既存のタイマーセットに追加する"
+            icon="create-outline"
+            onPress={toSelectExisting}
+            style={{ alignSelf: 'stretch' }}
+            type="secondary"
+          />
+        </View>
+      )}
 
-      <Text style={styles.subtitle}>タイマーセット管理</Text>
-      <Pressable style={styles.select} onPress={cycleSet}>
-        <Text style={styles.selectLabel}>現在のタイマーセット</Text>
-        <Text style={styles.selectValue}>{selectedSet ? selectedSet.name : 'なし'}</Text>
-      </Pressable>
+      {stage === 'newInfo' && (
+        <View>
+          <Text style={styles.title}>セット情報</Text>
+          <TextInput
+            value={setName}
+            onChangeText={setSetName}
+            placeholder="セット名"
+            style={styles.input}
+          />
+          <View style={styles.notifyRow}>
+            <Text style={styles.notifyLabel}>通知を有効にする</Text>
+            <Switch value={notify} onValueChange={setNotify} />
+          </View>
+          {notify && (
+            <>
+              <TextInput
+                value={startTime}
+                onChangeText={setStartTime}
+                placeholder="開始時刻 (例: 09:00)"
+                style={styles.input}
+              />
+              <TextInput
+                value={endTime}
+                onChangeText={setEndTime}
+                placeholder="終了時刻 (例: 18:00)"
+                style={styles.input}
+              />
+            </>
+          )}
+          <IconButton
+            label="次へ"
+            icon="arrow-forward-circle-outline"
+            onPress={startNewTimers}
+            style={{ marginTop: 20 }}
+          />
+        </View>
+      )}
 
-      <View style={styles.row}>
-        <IconButton
-          label="タイマーセットに追加"
-          icon="add-circle-outline"
-          onPress={addToSet}
-          style={{ flex: 1 }}
-        />
-        <IconButton
-          label="セットを作成"
-          icon="create-outline"
-          onPress={createSet}
-          type="secondary"
-          style={{ flex: 1 }}
-        />
-      </View>
+      {stage === 'selectExisting' && (
+        <View>
+          <Text style={styles.title}>タイマーセットを選択</Text>
+          {state.timerSets.map(s => (
+            <Pressable key={s.id} style={styles.select} onPress={() => selectExisting(s.id)}>
+              <Text style={styles.selectValue}>{s.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {stage === 'newTimers' && (
+        <View>
+          <Text style={styles.title}>タイマーを設定</Text>
+          {renderTimerRows()}
+          <IconButton
+            label="セットを保存"
+            icon="save-outline"
+            onPress={saveNew}
+            style={{ marginTop: 20 }}
+          />
+        </View>
+      )}
+
+      {stage === 'existingTimers' && (
+        <View>
+          <Text style={styles.title}>タイマーを設定</Text>
+          {renderTimerRows()}
+          <IconButton
+            label="保存"
+            icon="save-outline"
+            onPress={saveExisting}
+            style={{ marginTop: 20 }}
+          />
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -102,7 +268,6 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   title: { fontSize: 18, fontWeight: '700', color: Colors.text },
-  subtitle: { marginTop: 24, fontSize: 16, fontWeight: '700', color: Colors.text },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -112,6 +277,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 12,
   },
+  notifyRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  notifyLabel: { color: Colors.text },
   select: {
     marginTop: 12,
     backgroundColor: '#fff',
@@ -120,7 +292,23 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     padding: 12,
   },
-  selectLabel: { color: Colors.subText, fontSize: 12 },
-  selectValue: { marginTop: 4, color: Colors.text, fontWeight: '700' },
-  row: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  selectValue: { color: Colors.text, fontWeight: '700' },
+  timerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 4,
+  },
+  timerLabel: { width: 80, color: Colors.text },
+  timerInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  addIcon: { alignItems: 'center', marginTop: 12 },
 });
+

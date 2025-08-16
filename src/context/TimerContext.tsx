@@ -16,6 +16,11 @@ export type TimerSet = {
   description?: string;
   timers: Timer[];
   sound?: string; // asset path
+  notifications?: {
+    enabled: boolean;
+    start?: string;
+    end?: string;
+  };
   createdAt: string;
   updatedAt: string;
 };
