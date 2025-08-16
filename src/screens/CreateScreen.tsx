@@ -1,63 +1,92 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, View, Text, StyleSheet, TextInput, Pressable, Alert } from 'react-native';
 import { Colors } from '../constants/colors';
-import TimerItemForm from '../components/TimerItemForm';
 import { useTimerState } from '../context/TimerContext';
 import { uuidv4 } from '../utils/uuid';
 
 export default function CreateScreen() {
-  const { dispatch } = useTimerState();
-  const [name, setName] = useState('新しいタイマーセット');
-  const [description, setDescription] = useState('');
-  const [timers, setTimers] = useState<{id:string; label:string; durationSec:number; note?:string}[]>([
-    { id: uuidv4(), label: '集中', durationSec: 25*60 },
-  ]);
+  const { state, dispatch } = useTimerState();
+  const [label, setLabel] = useState('');
+  const [min, setMin] = useState('');
+  const [selectedId, setSelectedId] = useState(state.timerSets[0]?.id ?? '');
 
-  const addTimer = () => setTimers([...timers, { id: uuidv4(), label: '', durationSec: 60 }]);
+  const selectedSet = useMemo(
+    () => state.timerSets.find(s => s.id === selectedId) ?? null,
+    [selectedId, state.timerSets]
+  );
 
-  const save = () => {
-    if (!name.trim() || timers.length === 0 || timers.some(t => t.durationSec <= 0)) {
-      Alert.alert('保存できません', '名前を入力し、各タイマーに1秒以上の時間を設定してください。');
+  const cycleSet = () => {
+    if (state.timerSets.length === 0) return;
+    const idx = state.timerSets.findIndex(s => s.id === selectedId);
+    const next = state.timerSets[(idx + 1) % state.timerSets.length];
+    setSelectedId(next.id);
+  };
+
+  const addToSet = () => {
+    const m = parseInt(min || '0', 10);
+    if (!label.trim() || m <= 0 || !selectedSet) {
+      Alert.alert('追加できません', '名前と時間を入力し、タイマーセットを選択してください。');
       return;
     }
-    dispatch({ type: 'ADD_SET', payload: {
-      name, description, timers, sound: 'beep'
-    }});
-    setName('新しいタイマーセット');
-    setDescription('');
-    setTimers([{ id: uuidv4(), label: '集中', durationSec: 25*60 }]);
-    Alert.alert('保存しました', '「タイマー一覧」から確認できます。');
+    const timer = { id: uuidv4(), label, durationSec: m * 60 };
+    const updated = { ...selectedSet, timers: [...selectedSet.timers, timer] };
+    dispatch({ type: 'UPDATE_SET', payload: updated });
+    setLabel('');
+    setMin('');
+    Alert.alert('追加しました', `${selectedSet.name} にタイマーを追加しました。`);
+  };
+
+  const createSet = () => {
+    const m = parseInt(min || '0', 10);
+    if (!label.trim() || m <= 0) {
+      Alert.alert('作成できません', '名前と時間を入力してください。');
+      return;
+    }
+    dispatch({
+      type: 'ADD_SET',
+      payload: {
+        name: label || '新しいタイマーセット',
+        description: '',
+        timers: [{ id: uuidv4(), label, durationSec: m * 60 }],
+        sound: 'beep',
+      },
+    });
+    setLabel('');
+    setMin('');
+    Alert.alert('作成しました', '新しいタイマーセットを作成しました。');
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{padding:16}}>
-      <Text style={styles.title}>タイマーセットの作成</Text>
-      <TextInput value={name} onChangeText={setName} placeholder="セット名" style={styles.input} />
-      <TextInput value={description} onChangeText={setDescription} placeholder="説明（任意）" style={styles.input} />
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+      <Text style={styles.title}>新しいタイマーを追加</Text>
+      <TextInput
+        value={label}
+        onChangeText={setLabel}
+        placeholder="例: 勉強"
+        style={styles.input}
+      />
+      <TextInput
+        value={min}
+        onChangeText={setMin}
+        placeholder="例: 25"
+        keyboardType="number-pad"
+        style={styles.input}
+      />
 
-      <Text style={styles.subtitle}>タイマー</Text>
-      {timers.map((t, idx) => (
-        <TimerItemForm
-          key={t.id}
-          value={t}
-          onChange={(v)=>{
-            const list = timers.slice();
-            list[idx] = { ...t, ...v };
-            setTimers(list);
-          }}
-          onRemove={() => {
-            const list = timers.filter(x => x.id !== t.id);
-            setTimers(list);
-          }}
-        />
-      ))}
-      <Pressable onPress={addTimer} style={[styles.btn, styles.secondary]}>
-        <Text style={styles.btnText}>＋ タイマーを追加</Text>
+      <Text style={styles.subtitle}>タイマーセット管理</Text>
+      <Pressable style={styles.select} onPress={cycleSet}>
+        <Text style={styles.selectLabel}>現在のタイマーセット</Text>
+        <Text style={styles.selectValue}>{selectedSet ? selectedSet.name : 'なし'}</Text>
       </Pressable>
 
-      <Pressable onPress={save} style={[styles.btn, styles.primary]}>
-        <Text style={styles.btnText}>保存</Text>
-      </Pressable>
+      <View style={styles.row}>
+        <Pressable style={[styles.btn, styles.primary]} onPress={addToSet}>
+          <Text style={styles.btnText}>タイマーセットに追加</Text>
+        </Pressable>
+        <Pressable style={[styles.btn, styles.secondary]} onPress={createSet}>
+          <Text style={styles.btnText}>セットを作成</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -65,9 +94,28 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   title: { fontSize: 18, fontWeight: '700', color: Colors.text },
-  subtitle: { marginTop: 16, fontSize: 16, fontWeight: '700', color: Colors.text },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 8 },
-  btn: { marginTop: 12, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  subtitle: { marginTop: 24, fontSize: 16, fontWeight: '700', color: Colors.text },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 12,
+  },
+  select: {
+    marginTop: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 12,
+  },
+  selectLabel: { color: Colors.subText, fontSize: 12 },
+  selectValue: { marginTop: 4, color: Colors.text, fontWeight: '700' },
+  row: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  btn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   primary: { backgroundColor: Colors.primary },
   secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
   btnText: { fontWeight: '700', color: '#0B1D2A' },
