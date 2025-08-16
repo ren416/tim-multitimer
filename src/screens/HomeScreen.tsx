@@ -1,23 +1,40 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
-import TimerRunner from '../components/TimerRunner';
+import { formatHMS } from '../utils/format';
 
 export default function HomeScreen() {
   const { state } = useTimerState();
   const [selectedId, setSelectedId] = useState(state.timerSets[0]?.id ?? '');
-  const [runningId, setRunningId] = useState<string | null>(null);
+  const [index, setIndex] = useState(0);
+  const [remaining, setRemaining] = useState<number>(
+    state.timerSets[0]?.timers[0]?.durationSec ?? 0
+  );
+  const [running, setRunning] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedSet = useMemo(
     () => state.timerSets.find(s => s.id === selectedId) ?? null,
     [selectedId, state.timerSets]
   );
 
-  const runningSet = useMemo(
-    () => state.timerSets.find(s => s.id === runningId) ?? null,
-    [runningId, state.timerSets]
-  );
+  useEffect(() => {
+    // reset when switching sets
+    setIndex(0);
+    setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
+    setRunning(false);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, [selectedSet]);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   const cycleSet = () => {
     if (state.timerSets.length === 0) return;
@@ -26,42 +43,87 @@ export default function HomeScreen() {
     setSelectedId(next.id);
   };
 
+  const start = () => {
+    if (!selectedSet) return;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setRunning(true);
+    intervalRef.current = setInterval(() => {
+      setRemaining(r => {
+        if (r <= 1) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          endOne();
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+  };
+
+  const stop = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setRunning(false);
+  };
+
+  const reset = () => {
+    stop();
+    setIndex(0);
+    setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
+  };
+
+  const endOne = () => {
+    if (!selectedSet) return;
+    if (index + 1 < selectedSet.timers.length) {
+      const nextIdx = index + 1;
+      setIndex(nextIdx);
+      setRemaining(selectedSet.timers[nextIdx].durationSec);
+      setRunning(false);
+      // auto start next timer
+      setTimeout(() => start(), 500);
+    } else {
+      setRunning(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      {runningSet ? (
-        <TimerRunner timerSet={runningSet} onFinish={() => setRunningId(null)} onCancel={() => setRunningId(null)} />
-      ) : (
-        <>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>タイマーセット選択</Text>
-            <Pressable style={styles.select} onPress={cycleSet}>
-              <Text style={styles.selectLabel}>現在のタイマーセット</Text>
-              <Text style={styles.selectValue}>{selectedSet ? selectedSet.name : 'なし'}</Text>
+      <>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>タイマーセット選択</Text>
+          <Pressable style={styles.select} onPress={cycleSet}>
+            <Text style={styles.selectLabel}>現在のタイマーセット</Text>
+            <Text style={styles.selectValue}>{selectedSet ? selectedSet.name : 'なし'}</Text>
+          </Pressable>
+        </View>
+
+        <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
+          <Text style={styles.cardTitle}>タイマー待機中</Text>
+          <Text style={styles.waitingName}>{selectedSet?.name ?? '—'}</Text>
+          <Text style={styles.time}>{formatHMS(remaining)}</Text>
+          <View style={styles.row}>
+            <Pressable
+              style={[styles.btn, styles.primary]}
+              onPress={start}
+              disabled={!selectedSet || running}
+            >
+              <Text style={styles.btnText}>開始</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.btn, styles.secondary]}
+              onPress={stop}
+              disabled={!running}
+            >
+              <Text style={styles.btnText}>停止</Text>
+            </Pressable>
+            <Pressable style={[styles.btn, styles.secondary]} onPress={reset}>
+              <Text style={styles.btnText}>リセット</Text>
             </Pressable>
           </View>
-
-          <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
-            <Text style={styles.cardTitle}>タイマー待機中</Text>
-            <Text style={styles.waitingName}>{selectedSet?.name ?? '—'}</Text>
-            <Text style={styles.time}>00:00</Text>
-            <View style={styles.row}>
-              <Pressable
-                style={[styles.btn, styles.primary]}
-                onPress={() => setRunningId(selectedId)}
-                disabled={!selectedSet}
-              >
-                <Text style={styles.btnText}>開始</Text>
-              </Pressable>
-              <Pressable style={[styles.btn, styles.secondary]}>
-                <Text style={styles.btnText}>停止</Text>
-              </Pressable>
-              <Pressable style={[styles.btn, styles.secondary]}>
-                <Text style={styles.btnText}>リセット</Text>
-              </Pressable>
-            </View>
-          </View>
-        </>
-      )}
+        </View>
+      </>
     </ScrollView>
   );
 }
