@@ -3,6 +3,7 @@ import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { formatHMS } from '../utils/format';
+import IconButton from '../components/IconButton';
 
 export default function HomeScreen() {
   const { state } = useTimerState();
@@ -104,23 +105,28 @@ export default function HomeScreen() {
           <Text style={styles.waitingName}>{selectedSet?.name ?? '—'}</Text>
           <Text style={styles.time}>{formatHMS(remaining)}</Text>
           <View style={styles.row}>
-            <Pressable
-              style={[styles.btn, styles.primary]}
+            <IconButton
+              label="開始"
+              icon="play"
               onPress={start}
               disabled={!selectedSet || running}
-            >
-              <Text style={styles.btnText}>開始</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.btn, styles.secondary]}
+              style={{ flex: 1 }}
+            />
+            <IconButton
+              label="停止"
+              icon="pause"
               onPress={stop}
               disabled={!running}
-            >
-              <Text style={styles.btnText}>停止</Text>
-            </Pressable>
-            <Pressable style={[styles.btn, styles.secondary]} onPress={reset}>
-              <Text style={styles.btnText}>リセット</Text>
-            </Pressable>
+              type="secondary"
+              style={{ flex: 1 }}
+            />
+            <IconButton
+              label="リセット"
+              icon="refresh"
+              onPress={reset}
+              type="secondary"
+              style={{ flex: 1 }}
+            />
           </View>
         </View>
       </>
@@ -136,6 +142,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 1,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
   select: {
@@ -151,8 +162,4 @@ const styles = StyleSheet.create({
   waitingName: { marginTop: 8, color: Colors.subText },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
-  btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
-  primary: { backgroundColor: Colors.primary },
-  secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
-  btnText: { fontWeight: '700', color: '#0B1D2A' },
 });

@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, TextInput, Pressable, Alert } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, TextInput, Alert, Pressable } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { uuidv4 } from '../utils/uuid';
+import IconButton from '../components/IconButton';
 
 export default function CreateScreen() {
   const { state, dispatch } = useTimerState();
@@ -80,12 +81,19 @@ export default function CreateScreen() {
       </Pressable>
 
       <View style={styles.row}>
-        <Pressable style={[styles.btn, styles.primary]} onPress={addToSet}>
-          <Text style={styles.btnText}>タイマーセットに追加</Text>
-        </Pressable>
-        <Pressable style={[styles.btn, styles.secondary]} onPress={createSet}>
-          <Text style={styles.btnText}>セットを作成</Text>
-        </Pressable>
+        <IconButton
+          label="タイマーセットに追加"
+          icon="add-circle-outline"
+          onPress={addToSet}
+          style={{ flex: 1 }}
+        />
+        <IconButton
+          label="セットを作成"
+          icon="create-outline"
+          onPress={createSet}
+          type="secondary"
+          style={{ flex: 1 }}
+        />
       </View>
     </ScrollView>
   );
@@ -115,8 +123,4 @@ const styles = StyleSheet.create({
   selectLabel: { color: Colors.subText, fontSize: 12 },
   selectValue: { marginTop: 4, color: Colors.text, fontWeight: '700' },
   row: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  btn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
-  primary: { backgroundColor: Colors.primary },
-  secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
-  btnText: { fontWeight: '700', color: '#0B1D2A' },
 });
