@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { formatHMS } from '../utils/format';
@@ -13,6 +21,9 @@ export default function HomeScreen() {
     state.timerSets[0]?.timers[0]?.durationSec ?? 0
   );
   const [running, setRunning] = useState(false);
+  const [selectVisible, setSelectVisible] = useState(false);
+  const [inputVisible, setInputVisible] = useState(false);
+  const [inputText, setInputText] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedSet = useMemo(
@@ -37,23 +48,50 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const cycleSet = () => {
-    if (state.timerSets.length === 0) return;
-    const idx = state.timerSets.findIndex(s => s.id === selectedId);
-    const next = state.timerSets[(idx + 1) % state.timerSets.length];
-    setSelectedId(next.id);
+  const handleSelectPress = () => {
+    setSelectVisible(true);
+  };
+
+  const chooseSet = (id: string) => {
+    setSelectedId(id);
+    setSelectVisible(false);
+  };
+
+  const handleTimePress = () => {
+    if (selectedSet) return;
+    setInputText('');
+    setInputVisible(true);
+  };
+
+  const parseTimeInput = (str: string) => {
+    const parts = str.split(':').map(p => parseInt(p, 10));
+    if (parts.some(isNaN)) return 0;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 1) return parts[0];
+    return 0;
+  };
+
+  const confirmQuick = () => {
+    const sec = parseTimeInput(inputText);
+    setRemaining(sec);
+    setInputVisible(false);
   };
 
   const start = () => {
-    if (!selectedSet) return;
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (remaining <= 0) return;
     setRunning(true);
     intervalRef.current = setInterval(() => {
       setRemaining(r => {
         if (r <= 1) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
-          endOne();
+          if (selectedSet) {
+            endOne();
+          } else {
+            setRunning(false);
+          }
           return 0;
         }
         return r - 1;
@@ -71,8 +109,12 @@ export default function HomeScreen() {
 
   const reset = () => {
     stop();
-    setIndex(0);
-    setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
+    if (selectedSet) {
+      setIndex(0);
+      setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
+    } else {
+      setRemaining(0);
+    }
   };
 
   const endOne = () => {
@@ -90,11 +132,11 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <>
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>タイマーセット選択</Text>
-          <Pressable style={styles.select} onPress={cycleSet}>
+          <Pressable style={styles.select} onPress={handleSelectPress}>
             <Text style={styles.selectLabel}>現在のタイマーセット</Text>
             <Text style={styles.selectValue}>{selectedSet ? selectedSet.name : 'なし'}</Text>
           </Pressable>
@@ -102,14 +144,16 @@ export default function HomeScreen() {
 
         <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
           <Text style={styles.cardTitle}>タイマー待機中</Text>
-          <Text style={styles.waitingName}>{selectedSet?.name ?? '—'}</Text>
-          <Text style={styles.time}>{formatHMS(remaining)}</Text>
+          <Text style={styles.waitingName}>{selectedSet?.name ?? 'クイックタイマー'}</Text>
+          <Pressable onPress={handleTimePress}>
+            <Text style={styles.time}>{formatHMS(remaining)}</Text>
+          </Pressable>
           <View style={styles.row}>
             <IconButton
               label="開始"
               icon="play"
               onPress={start}
-              disabled={!selectedSet || running}
+              disabled={running || (!selectedSet && remaining <= 0)}
               style={{ flex: 1 }}
             />
             <IconButton
@@ -129,8 +173,65 @@ export default function HomeScreen() {
             />
           </View>
         </View>
-      </>
-    </ScrollView>
+      </ScrollView>
+
+      <Modal visible={selectVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <Pressable style={styles.modalItem} onPress={() => chooseSet('')}>
+                <Text style={styles.modalItemText}>クイックタイマー</Text>
+              </Pressable>
+              {state.timerSets.map(s => (
+                <Pressable
+                  key={s.id}
+                  style={styles.modalItem}
+                  onPress={() => chooseSet(s.id)}
+                >
+                  <Text style={styles.modalItemText}>{s.name}</Text>
+                </Pressable>
+              ))}
+              <Pressable
+                style={[styles.modalItem, { borderTopWidth: 1, borderTopColor: Colors.border }]}
+                onPress={() => setSelectVisible(false)}
+              >
+                <Text style={[styles.modalItemText, { color: Colors.subText }]}>キャンセル</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={inputVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>時間を入力</Text>
+            <TextInput
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="mm:ss"
+              keyboardType="numbers-and-punctuation"
+              style={styles.input}
+            />
+            <View style={styles.row}>
+              <IconButton
+                label="決定"
+                icon="checkmark"
+                onPress={confirmQuick}
+                style={{ flex: 1 }}
+              />
+              <IconButton
+                label="キャンセル"
+                icon="close"
+                onPress={() => setInputVisible(false)}
+                type="secondary"
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -162,4 +263,28 @@ const styles = StyleSheet.create({
   waitingName: { marginTop: 8, color: Colors.subText },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    width: '80%',
+  },
+  modalItem: { paddingVertical: 12 },
+  modalItemText: { color: Colors.text, fontWeight: '700', textAlign: 'center' },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 12,
+    textAlign: 'center',
+    color: Colors.text,
+  },
 });
