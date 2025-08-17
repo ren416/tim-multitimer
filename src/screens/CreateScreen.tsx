@@ -35,6 +35,25 @@ export default function CreateScreen({ route, navigation }: any) {
   const [selectedId, setSelectedId] = useState('');
   const [timers, setTimers] = useState<TimerInput[]>([]);
 
+  useEffect(() => {
+    let title = '作成';
+    if (stage === 'newInfo' || stage === 'newTimers') {
+      if (setName.trim()) {
+        title = `作成: ${setName}`;
+      } else {
+        title = '作成';
+      }
+    } else if (stage === 'selectExisting' || stage === 'existingTimers') {
+      title = '編集';
+      const targetId = selectedId || route?.params?.editId;
+      const target = state.timerSets.find(s => s.id === targetId);
+      if (target) {
+        title = `編集: ${target.name}`;
+      }
+    }
+    navigation.setOptions({ title });
+  }, [stage, setName, selectedId, state.timerSets, navigation, route?.params?.editId]);
+
   const reset = () => {
     setStage('choose');
     setSetName('');
