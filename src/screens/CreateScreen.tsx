@@ -35,6 +35,22 @@ export default function CreateScreen({ route, navigation }: any) {
   const [selectedId, setSelectedId] = useState('');
   const [timers, setTimers] = useState<TimerInput[]>([]);
 
+  const reset = () => {
+    setStage('choose');
+    setSetName('');
+    setNotify(false);
+    setStartTime('');
+    setEndTime('');
+    setSelectedId('');
+    setTimers([]);
+    navigation.setParams({ editId: undefined });
+  };
+
+  const handleCancel = () => {
+    reset();
+    navigation.navigate('タイマー一覧');
+  };
+
   useEffect(() => {
     let title = '作成';
     if (stage === 'newInfo' || stage === 'newTimers') {
@@ -51,19 +67,15 @@ export default function CreateScreen({ route, navigation }: any) {
         title = `編集: ${target.name}`;
       }
     }
-    navigation.setOptions({ title });
+    navigation.setOptions({
+      title,
+      headerLeft: () => (
+        <Pressable onPress={handleCancel} style={{ marginLeft: 8 }}>
+          <Text style={{ color: Colors.primary }}>キャンセル</Text>
+        </Pressable>
+      ),
+    });
   }, [stage, setName, selectedId, state.timerSets, navigation, route?.params?.editId]);
-
-  const reset = () => {
-    setStage('choose');
-    setSetName('');
-    setNotify(false);
-    setStartTime('');
-    setEndTime('');
-    setSelectedId('');
-    setTimers([]);
-    navigation.setParams({ editId: undefined });
-  };
 
   const toNewInfo = () => {
     reset();

@@ -11,11 +11,12 @@ import {
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { formatHMS } from '../utils/format';
+import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
-  const { state } = useTimerState();
+  const { state, dispatch } = useTimerState();
   const [selectedId, setSelectedId] = useState(state.timerSets[0]?.id ?? '');
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState<number>(
@@ -27,6 +28,9 @@ export default function HomeScreen() {
   const [quickDigits, setQuickDigits] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const [runCount, setRunCount] = useState(0);
+  const [totalSec, setTotalSec] = useState(0);
 
   const selectedSet = useMemo(
     () => state.timerSets.find(s => s.id === selectedId) ?? null,
@@ -39,6 +43,9 @@ export default function HomeScreen() {
     setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
     setRunning(false);
     setQuickDigits('');
+    setHistoryId(null);
+    setRunCount(0);
+    setTotalSec(0);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -48,8 +55,14 @@ export default function HomeScreen() {
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (historyId) {
+        dispatch({
+          type: 'LOG_COMPLETE',
+          payload: { id: historyId, cancelled: true, totalDurationSec: totalSec, timersRun: runCount },
+        });
+      }
     };
-  }, []);
+  }, [historyId, totalSec, runCount, dispatch]);
 
   const handleSelectPress = () => {
     setSelectVisible(true);
@@ -91,6 +104,13 @@ export default function HomeScreen() {
   };
 
   const start = () => {
+    if (selectedSet && !historyId) {
+      const id = uuidv4();
+      dispatch({ type: 'LOG_START', payload: { id, timerSetId: selectedSet.id } });
+      setHistoryId(id);
+      setRunCount(0);
+      setTotalSec(0);
+    }
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (remaining <= 0) return;
     setRunning(true);
@@ -121,6 +141,20 @@ export default function HomeScreen() {
 
   const reset = () => {
     stop();
+    if (historyId) {
+      dispatch({
+        type: 'LOG_COMPLETE',
+        payload: {
+          id: historyId,
+          cancelled: true,
+          totalDurationSec: totalSec,
+          timersRun: runCount,
+        },
+      });
+      setHistoryId(null);
+      setRunCount(0);
+      setTotalSec(0);
+    }
     if (selectedSet) {
       setIndex(0);
       setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
@@ -132,6 +166,11 @@ export default function HomeScreen() {
 
   const endOne = () => {
     if (!selectedSet) return;
+    const duration = selectedSet.timers[index].durationSec;
+    const newRun = runCount + 1;
+    const newTotal = totalSec + duration;
+    setRunCount(newRun);
+    setTotalSec(newTotal);
     if (index + 1 < selectedSet.timers.length) {
       const nextIdx = index + 1;
       setIndex(nextIdx);
@@ -141,6 +180,15 @@ export default function HomeScreen() {
       setTimeout(() => start(), 500);
     } else {
       setRunning(false);
+      if (historyId) {
+        dispatch({
+          type: 'LOG_COMPLETE',
+          payload: { id: historyId, totalDurationSec: newTotal, timersRun: newRun },
+        });
+        setHistoryId(null);
+        setRunCount(0);
+        setTotalSec(0);
+      }
     }
   };
 

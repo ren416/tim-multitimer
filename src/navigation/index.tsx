@@ -34,7 +34,7 @@ export default function RootTabs() {
       <Tab.Screen
         name="作成"
         component={CreateScreen}
-        options={{ tabBarButton: () => null }}
+        options={{ tabBarButton: () => null, tabBarStyle: { display: 'none' } }}
       />
       <Tab.Screen name="タイマー一覧" component={TimerListScreen} />
       <Tab.Screen name="記録" component={HistoryScreen} />

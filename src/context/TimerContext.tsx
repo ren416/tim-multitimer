@@ -55,7 +55,7 @@ type Action =
   | { type: 'UPDATE_SET'; payload: TimerSet }
   | { type: 'DELETE_SET'; payload: { id: string } }
   | { type: 'DUPLICATE_SET'; payload: { id: string } }
-  | { type: 'LOG_START'; payload: { timerSetId?: string } }
+  | { type: 'LOG_START'; payload: { id?: string; timerSetId?: string } }
   | { type: 'LOG_COMPLETE'; payload: { id: string; cancelled?: boolean; totalDurationSec?: number; timersRun?: number } }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> }
   | { type: 'HYDRATE'; payload: Partial<State> };
@@ -88,7 +88,11 @@ const reducer = (state: State, action: Action): State => {
       };
     }
     case 'DELETE_SET': {
-      return { ...state, timerSets: state.timerSets.filter(s => s.id !== action.payload.id) };
+      return {
+        ...state,
+        timerSets: state.timerSets.filter(s => s.id !== action.payload.id),
+        history: state.history.filter(h => h.timerSetId !== action.payload.id),
+      };
     }
     case 'DUPLICATE_SET': {
       const src = state.timerSets.find(s => s.id === action.payload.id);
@@ -105,11 +109,11 @@ const reducer = (state: State, action: Action): State => {
     }
     case 'LOG_START': {
       const entry: HistoryEntry = {
-        id: uuidv4(),
+        id: action.payload.id ?? uuidv4(),
         timerSetId: action.payload.timerSetId,
         timersRun: 0,
         totalDurationSec: 0,
-        startedAt: dayjs().toISOString()
+        startedAt: dayjs().toISOString(),
       };
       return { ...state, history: [entry, ...state.history] };
     }

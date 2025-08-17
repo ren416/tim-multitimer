@@ -21,10 +21,18 @@ export default function TimerListScreen({ navigation }: any) {
             onEdit={() => navigation.navigate('作成', { editId: item.id })}
             onDuplicate={() => dispatch({ type: 'DUPLICATE_SET', payload: { id: item.id } })}
             onDelete={() => {
-              Alert.alert('削除確認', '本当に削除しますか？', [
-                { text: 'キャンセル', style: 'cancel' },
-                { text: '削除', style: 'destructive', onPress: () => dispatch({ type: 'DELETE_SET', payload: { id: item.id } })}
-              ]);
+              Alert.alert(
+                '削除確認',
+                'このタイマーに関する記録も削除されますがよろしいですか？',
+                [
+                  { text: 'キャンセル', style: 'cancel' },
+                  {
+                    text: '削除',
+                    style: 'destructive',
+                    onPress: () => dispatch({ type: 'DELETE_SET', payload: { id: item.id } }),
+                  },
+                ],
+              );
             }}
           />
         )}
