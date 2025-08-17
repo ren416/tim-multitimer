@@ -19,6 +19,7 @@ export default function HomeScreen() {
   const { state, dispatch } = useTimerState();
   const [selectedId, setSelectedId] = useState(state.timerSets[0]?.id ?? '');
   const [index, setIndex] = useState(0);
+  const indexRef = useRef(0);
   const [remaining, setRemaining] = useState<number>(
     state.timerSets[0]?.timers[0]?.durationSec ?? 0
   );
@@ -31,6 +32,15 @@ export default function HomeScreen() {
   const [historyId, setHistoryId] = useState<string | null>(null);
   const [runCount, setRunCount] = useState(0);
   const [totalSec, setTotalSec] = useState(0);
+  const historyRef = useRef({ id: historyId, total: totalSec, run: runCount });
+
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
+
+  useEffect(() => {
+    historyRef.current = { id: historyId, total: totalSec, run: runCount };
+  }, [historyId, totalSec, runCount]);
 
   const selectedSet = useMemo(
     () => state.timerSets.find(s => s.id === selectedId) ?? null,
@@ -55,14 +65,15 @@ export default function HomeScreen() {
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (historyId) {
+      const { id, total, run } = historyRef.current;
+      if (id) {
         dispatch({
           type: 'LOG_COMPLETE',
-          payload: { id: historyId, cancelled: true, totalDurationSec: totalSec, timersRun: runCount },
+          payload: { id, cancelled: true, totalDurationSec: total, timersRun: run },
         });
       }
     };
-  }, [historyId, totalSec, runCount, dispatch]);
+  }, [dispatch]);
 
   const handleSelectPress = () => {
     setSelectVisible(true);
@@ -131,6 +142,11 @@ export default function HomeScreen() {
     }, 1000);
   };
 
+  const startRef = useRef(start);
+  useEffect(() => {
+    startRef.current = start;
+  });
+
   const stop = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -166,18 +182,20 @@ export default function HomeScreen() {
 
   const endOne = () => {
     if (!selectedSet) return;
-    const duration = selectedSet.timers[index].durationSec;
+    const currentIdx = indexRef.current;
+    const duration = selectedSet.timers[currentIdx].durationSec;
     const newRun = runCount + 1;
     const newTotal = totalSec + duration;
     setRunCount(newRun);
     setTotalSec(newTotal);
-    if (index + 1 < selectedSet.timers.length) {
-      const nextIdx = index + 1;
+    if (currentIdx + 1 < selectedSet.timers.length) {
+      const nextIdx = currentIdx + 1;
       setIndex(nextIdx);
+      indexRef.current = nextIdx;
       setRemaining(selectedSet.timers[nextIdx].durationSec);
       setRunning(false);
       // auto start next timer
-      setTimeout(() => start(), 500);
+      setTimeout(() => startRef.current(), 500);
     } else {
       setRunning(false);
       if (historyId) {

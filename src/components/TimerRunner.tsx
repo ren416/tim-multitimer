@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
@@ -16,6 +16,7 @@ type Props = {
 export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const { dispatch } = useTimerState();
   const [index, setIndex] = useState(0);
+  const indexRef = useRef(0);
   const [remaining, setRemaining] = useState(timerSet.timers[0]?.durationSec ?? 0);
   const [running, setRunning] = useState(false);
   const [startedHistoryId, setStartedHistoryId] = useState<string | null>(null);
@@ -24,6 +25,10 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const totalCount = timerSet.timers.length;
   const current = timerSet.timers[index];
+
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
 
   useEffect(() => {
     if (!startedHistoryId) {
@@ -101,14 +106,22 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     setRemaining(current.durationSec);
   };
 
+  const startRef = useRef(start);
+  useEffect(() => {
+    startRef.current = start;
+  });
+
   const endOne = async () => {
     try { await soundRef.current?.replayAsync(); } catch {}
-    if (index + 1 < totalCount) {
-      setIndex(i => i + 1);
-      setRemaining(timerSet.timers[index + 1].durationSec);
+    const currentIdx = indexRef.current;
+    if (currentIdx + 1 < totalCount) {
+      const next = currentIdx + 1;
+      setIndex(next);
+      indexRef.current = next;
+      setRemaining(timerSet.timers[next].durationSec);
       setRunning(false);
       // auto start next
-      setTimeout(() => start(), 500);
+      setTimeout(() => startRef.current(), 500);
     } else {
       setRunning(false);
       onFinish?.();
@@ -116,9 +129,12 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   };
 
   const skip = () => {
-    if (index + 1 < totalCount) {
-      setIndex(i => i + 1);
-      setRemaining(timerSet.timers[index + 1].durationSec);
+    const currentIdx = indexRef.current;
+    if (currentIdx + 1 < totalCount) {
+      const next = currentIdx + 1;
+      setIndex(next);
+      indexRef.current = next;
+      setRemaining(timerSet.timers[next].durationSec);
     } else {
       onFinish?.();
     }
