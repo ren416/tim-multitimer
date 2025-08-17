@@ -206,7 +206,14 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
-          <Text style={styles.waitingName}>{selectedSet?.name ?? '"クイックタイマー"'}</Text>
+          {selectedSet ? (
+            <>
+              <Text style={styles.infoText}>{`タイマーセット名：${selectedSet.name}`}</Text>
+              <Text style={styles.infoText}>{`今の時間：${selectedSet.timers[index]?.label ?? ''}`}</Text>
+            </>
+          ) : (
+            <Text style={styles.waitingName}>"クイックタイマー"</Text>
+          )}
           <Pressable onPress={handleTimePress}>
             <Text style={styles.time}>
               {selectedSet || running || remaining > 0
@@ -349,6 +356,7 @@ const styles = StyleSheet.create({
   selectLabel: { color: Colors.subText, fontSize: 12 },
   selectValue: { marginTop: 4, color: Colors.text, fontWeight: '700' },
   waitingName: { marginTop: 8, color: Colors.subText },
+  infoText: { marginTop: 8, color: Colors.text },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
   modalOverlay: {

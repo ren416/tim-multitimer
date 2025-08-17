@@ -183,28 +183,31 @@ export default function CreateScreen({ route, navigation }: any) {
   const renderTimerRows = () => (
     <View>
       {timers.map((t, idx) => (
-        <View key={idx} style={styles.timerRow}>
+        <View key={idx} style={styles.timerBlock}>
+          <Text style={styles.timerBlockTitle}>{`タイマー${idx + 1}`}</Text>
           <TextInput
             value={t.label}
             onChangeText={v => updateTimer(idx, 'label', v)}
-            placeholder={`タイマー${idx + 1}`}
-            style={[styles.timerNameInput]}
+            placeholder="タイマー名"
+            style={styles.timerNameInput}
           />
-          <TextInput
-            value={t.min}
-            onChangeText={v => updateTimer(idx, 'min', v)}
-            placeholder="分"
-            keyboardType="number-pad"
-            style={[styles.timerInput, { marginLeft: 4, marginRight: 4 }]}
-          />
-          <Text style={{ alignSelf: 'center' }}>:</Text>
-          <TextInput
-            value={t.sec}
-            onChangeText={v => updateTimer(idx, 'sec', v)}
-            placeholder="秒"
-            keyboardType="number-pad"
-            style={[styles.timerInput, { marginLeft: 4 }]}
-          />
+          <View style={styles.timeRow}>
+            <TextInput
+              value={t.min}
+              onChangeText={v => updateTimer(idx, 'min', v)}
+              placeholder="分"
+              keyboardType="number-pad"
+              style={[styles.timerInput, { marginRight: 4 }]}
+            />
+            <Text style={{ alignSelf: 'center' }}>:</Text>
+            <TextInput
+              value={t.sec}
+              onChangeText={v => updateTimer(idx, 'sec', v)}
+              placeholder="秒"
+              keyboardType="number-pad"
+              style={[styles.timerInput, { marginLeft: 4 }]}
+            />
+          </View>
         </View>
       ))}
       <Pressable onPress={addTimerRow} style={styles.addIcon}>
@@ -346,19 +349,28 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   selectValue: { color: Colors.text, fontWeight: '700' },
-  timerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  timerBlock: {
     marginTop: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 12,
   },
+  timerBlockTitle: { color: Colors.text, fontWeight: '700' },
   timerNameInput: {
-    width: 80,
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
+    marginTop: 8,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
   },
   timerInput: {
     flex: 1,
