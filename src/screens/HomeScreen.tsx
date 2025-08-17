@@ -146,13 +146,13 @@ export default function HomeScreen() {
           <Pressable style={styles.select} onPress={handleSelectPress}>
             <Text style={styles.selectLabel}>現在のタイマーセット</Text>
             <Text style={styles.selectValue}>
-              {selectedSet ? selectedSet.name : 'クイックタイマー'}
+              {selectedSet ? selectedSet.name : '"クイックタイマー"'}
             </Text>
           </Pressable>
         </View>
 
         <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
-          <Text style={styles.waitingName}>{selectedSet?.name ?? 'クイックタイマー'}</Text>
+          <Text style={styles.waitingName}>{selectedSet?.name ?? '"クイックタイマー"'}</Text>
           <Pressable onPress={handleTimePress}>
             <Text style={styles.time}>
               {selectedSet || running || remaining > 0
@@ -192,7 +192,7 @@ export default function HomeScreen() {
           <View style={styles.modalContent}>
             <ScrollView>
               <Pressable style={styles.modalItem} onPress={() => chooseSet('')}>
-                <Text style={styles.modalItemText}>クイックタイマー</Text>
+                <Text style={styles.modalItemText}>"クイックタイマー"</Text>
               </Pressable>
               {state.timerSets.map(s => (
                 <Pressable
