@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Alert, Pressable } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import TimerSetCard from '../components/TimerSetCard';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TimerListScreen({ navigation }: any) {
   const { state, dispatch } = useTimerState();
@@ -17,9 +18,7 @@ export default function TimerListScreen({ navigation }: any) {
           <TimerSetCard
             item={item}
             onRun={() => navigation.navigate('ホーム', { runSetId: item.id })}
-            onEdit={() => {
-              Alert.alert('未実装', '簡易版では「作成」タブから新規作成のみ対応です。');
-            }}
+            onEdit={() => navigation.navigate('作成', { editId: item.id })}
             onDuplicate={() => dispatch({ type: 'DUPLICATE_SET', payload: { id: item.id } })}
             onDelete={() => {
               Alert.alert('削除確認', '本当に削除しますか？', [
@@ -29,12 +28,16 @@ export default function TimerListScreen({ navigation }: any) {
             }}
           />
         )}
-        ListEmptyComponent={<Text style={{color: Colors.subText}}>まだタイマーセットがありません。「作成」から追加しましょう。</Text>}
+        ListEmptyComponent={<Text style={{color: Colors.subText}}>まだタイマーセットがありません。右下の⊕から追加しましょう。</Text>}
       />
+      <Pressable style={styles.fab} onPress={() => navigation.navigate('作成', { editId: undefined })}>
+        <Ionicons name="add-circle" size={64} color={Colors.primary} />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  fab: { position: 'absolute', right: 24, bottom: 24 },
 });

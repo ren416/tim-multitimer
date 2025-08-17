@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -24,7 +24,7 @@ type Stage =
 
 type TimerInput = { id?: string; label?: string; min: string; sec: string };
 
-export default function CreateScreen() {
+export default function CreateScreen({ route, navigation }: any) {
   const { state, dispatch } = useTimerState();
 
   const [stage, setStage] = useState<Stage>('choose');
@@ -43,6 +43,7 @@ export default function CreateScreen() {
     setEndTime('');
     setSelectedId('');
     setTimers([]);
+    navigation.setParams({ editId: undefined });
   };
 
   const toNewInfo = () => {
@@ -111,6 +112,7 @@ export default function CreateScreen() {
     });
     Alert.alert('作成しました', '新しいタイマーセットを作成しました。');
     reset();
+    navigation.goBack();
   };
 
   const saveExisting = () => {
@@ -137,6 +139,7 @@ export default function CreateScreen() {
     dispatch({ type: 'UPDATE_SET', payload: updated });
     Alert.alert('更新しました', `${target.name} を更新しました。`);
     reset();
+    navigation.goBack();
   };
 
   const renderTimerRows = () => (
@@ -166,6 +169,13 @@ export default function CreateScreen() {
       </Pressable>
     </View>
   );
+
+  useEffect(() => {
+    if (route?.params?.editId) {
+      reset();
+      selectExisting(route.params.editId);
+    }
+  }, [route?.params?.editId]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
