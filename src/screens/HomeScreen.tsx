@@ -130,11 +130,6 @@ export default function HomeScreen() {
         if (r <= 1) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
-          if (selectedSet) {
-            endOne();
-          } else {
-            setRunning(false);
-          }
           return 0;
         }
         return r - 1;
@@ -209,6 +204,16 @@ export default function HomeScreen() {
       }
     }
   };
+
+  useEffect(() => {
+    if (remaining === 0 && running) {
+      if (selectedSet) {
+        endOne();
+      } else {
+        setRunning(false);
+      }
+    }
+  }, [remaining, running, selectedSet]);
 
   return (
     <>
