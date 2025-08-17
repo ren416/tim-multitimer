@@ -12,6 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#F0FAFF"
     },
+
+    "newArchEnabled": true,
+    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.tim"
