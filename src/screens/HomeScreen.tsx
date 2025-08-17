@@ -12,6 +12,7 @@ import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { formatHMS } from '../utils/format';
 import IconButton from '../components/IconButton';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
   const { state } = useTimerState();
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const [selectVisible, setSelectVisible] = useState(false);
   const [inputVisible, setInputVisible] = useState(false);
   const [quickDigits, setQuickDigits] = useState('');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedSet = useMemo(
@@ -56,6 +58,10 @@ export default function HomeScreen() {
   const chooseSet = (id: string) => {
     setSelectedId(id);
     setSelectVisible(false);
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleTimePress = () => {
@@ -195,19 +201,35 @@ export default function HomeScreen() {
                 <Text style={styles.modalItemText}>"クイックタイマー"</Text>
               </Pressable>
               {state.timerSets.map(s => (
-                <Pressable
-                  key={s.id}
-                  style={styles.modalItem}
-                  onPress={() => chooseSet(s.id)}
-                >
-                  <Text style={styles.modalItemText}>{s.name}</Text>
-                </Pressable>
+                <View key={s.id} style={styles.modalItem}>
+                  <View style={styles.modalItemRow}>
+                    <Pressable style={{ flex: 1 }} onPress={() => chooseSet(s.id)}>
+                      <Text style={styles.modalItemText}>{s.name}</Text>
+                    </Pressable>
+                    <Pressable onPress={() => toggleExpanded(s.id)}>
+                      <Ionicons
+                        name={expanded[s.id] ? 'chevron-up' : 'chevron-down'}
+                        size={20}
+                        color={Colors.text}
+                      />
+                    </Pressable>
+                  </View>
+                  {expanded[s.id] && (
+                    <View style={styles.modalTimers}>
+                      {s.timers.map(t => (
+                        <Text key={t.id} style={styles.modalTimerText}>
+                          {t.label} ({formatHMS(t.durationSec)})
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
               ))}
               <Pressable
                 style={[styles.modalItem, { borderTopWidth: 1, borderTopColor: Colors.border }]}
                 onPress={() => setSelectVisible(false)}
               >
-                <Text style={[styles.modalItemText, { color: Colors.subText }]}>キャンセル</Text>
+                <Text style={[styles.modalItemText, { color: Colors.subText, textAlign: 'center' }]}>キャンセル</Text>
               </Pressable>
             </ScrollView>
           </View>
@@ -294,7 +316,14 @@ const styles = StyleSheet.create({
     width: '80%',
   },
   modalItem: { paddingVertical: 12 },
-  modalItemText: { color: Colors.text, fontWeight: '700', textAlign: 'center' },
+  modalItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalItemText: { color: Colors.text, fontWeight: '700', textAlign: 'left' },
+  modalTimers: { marginTop: 8, marginLeft: 8 },
+  modalTimerText: { color: Colors.subText, fontSize: 12 },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
   hiddenInput: { height: 0, width: 0 },
 });

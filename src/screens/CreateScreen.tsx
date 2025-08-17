@@ -80,7 +80,7 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('作成できません', 'セット名を入力してください。');
       return;
     }
-    setTimers([{ min: '', sec: '' }]);
+    setTimers([{ label: '', min: '', sec: '' }]);
     setStage('newTimers');
   };
 
@@ -99,11 +99,18 @@ export default function CreateScreen({ route, navigation }: any) {
     setStage('existingTimers');
   };
 
-  const updateTimer = (index: number, field: 'min' | 'sec', value: string) => {
-    setTimers(prev => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
+  const updateTimer = (
+    index: number,
+    field: 'label' | 'min' | 'sec',
+    value: string,
+  ) => {
+    setTimers(prev =>
+      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
+    );
   };
 
-  const addTimerRow = () => setTimers(prev => [...prev, { min: '', sec: '' }]);
+  const addTimerRow = () =>
+    setTimers(prev => [...prev, { label: '', min: '', sec: '' }]);
 
   const saveNew = () => {
     const parsed = timers
@@ -165,13 +172,18 @@ export default function CreateScreen({ route, navigation }: any) {
     <View>
       {timers.map((t, idx) => (
         <View key={idx} style={styles.timerRow}>
-          <Text style={styles.timerLabel}>{`タイマー${idx + 1}`}</Text>
+          <TextInput
+            value={t.label}
+            onChangeText={v => updateTimer(idx, 'label', v)}
+            placeholder={`タイマー${idx + 1}`}
+            style={[styles.timerNameInput]}
+          />
           <TextInput
             value={t.min}
             onChangeText={v => updateTimer(idx, 'min', v)}
             placeholder="分"
             keyboardType="number-pad"
-            style={[styles.timerInput, { marginRight: 4 }]}
+            style={[styles.timerInput, { marginLeft: 4, marginRight: 4 }]}
           />
           <Text style={{ alignSelf: 'center' }}>:</Text>
           <TextInput
@@ -326,9 +338,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 12,
-    gap: 4,
   },
-  timerLabel: { width: 80, color: Colors.text },
+  timerNameInput: {
+    width: 80,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
   timerInput: {
     flex: 1,
     backgroundColor: '#fff',
