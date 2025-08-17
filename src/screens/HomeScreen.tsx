@@ -23,7 +23,7 @@ export default function HomeScreen() {
   const [running, setRunning] = useState(false);
   const [selectVisible, setSelectVisible] = useState(false);
   const [inputVisible, setInputVisible] = useState(false);
-  const [inputText, setInputText] = useState('');
+  const [quickDigits, setQuickDigits] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedSet = useMemo(
@@ -36,6 +36,7 @@ export default function HomeScreen() {
     setIndex(0);
     setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
     setRunning(false);
+    setQuickDigits('');
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -59,22 +60,27 @@ export default function HomeScreen() {
 
   const handleTimePress = () => {
     if (selectedSet) return;
-    setInputText('');
+    setQuickDigits('');
     setInputVisible(true);
   };
 
-  const parseTimeInput = (str: string) => {
-    const parts = str.split(':').map(p => parseInt(p, 10));
-    if (parts.some(isNaN)) return 0;
-    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    if (parts.length === 2) return parts[0] * 60 + parts[1];
-    if (parts.length === 1) return parts[0];
-    return 0;
+  const formatQuickDisplay = (d: string) => {
+    const padded = d.padStart(4, '-');
+    return `${padded.slice(0, 2)}:${padded.slice(2, 4)}`;
+  };
+
+  const handleDigitChange = (text: string) => {
+    const digits = text.replace(/[^0-9]/g, '');
+    setQuickDigits(digits.slice(-4));
   };
 
   const confirmQuick = () => {
-    const sec = parseTimeInput(inputText);
+    const padded = quickDigits.padStart(4, '0');
+    const m = parseInt(padded.slice(0, 2), 10);
+    const s = parseInt(padded.slice(2, 4), 10);
+    const sec = m * 60 + s;
     setRemaining(sec);
+    setQuickDigits('');
     setInputVisible(false);
   };
 
@@ -114,6 +120,7 @@ export default function HomeScreen() {
       setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
     } else {
       setRemaining(0);
+      setQuickDigits('');
     }
   };
 
@@ -138,15 +145,20 @@ export default function HomeScreen() {
           <Text style={styles.cardTitle}>タイマーセット選択</Text>
           <Pressable style={styles.select} onPress={handleSelectPress}>
             <Text style={styles.selectLabel}>現在のタイマーセット</Text>
-            <Text style={styles.selectValue}>{selectedSet ? selectedSet.name : 'なし'}</Text>
+            <Text style={styles.selectValue}>
+              {selectedSet ? selectedSet.name : 'クイックタイマー'}
+            </Text>
           </Pressable>
         </View>
 
         <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
-          <Text style={styles.cardTitle}>タイマー待機中</Text>
           <Text style={styles.waitingName}>{selectedSet?.name ?? 'クイックタイマー'}</Text>
           <Pressable onPress={handleTimePress}>
-            <Text style={styles.time}>{formatHMS(remaining)}</Text>
+            <Text style={styles.time}>
+              {selectedSet || running || remaining > 0
+                ? formatHMS(remaining)
+                : formatQuickDisplay(quickDigits)}
+            </Text>
           </Pressable>
           <View style={styles.row}>
             <IconButton
@@ -206,12 +218,15 @@ export default function HomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>時間を入力</Text>
+            <Text style={[styles.time, { textAlign: 'center' }]}>
+              {formatQuickDisplay(quickDigits)}
+            </Text>
             <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="mm:ss"
-              keyboardType="numbers-and-punctuation"
-              style={styles.input}
+              value={quickDigits}
+              onChangeText={handleDigitChange}
+              keyboardType="number-pad"
+              style={styles.hiddenInput}
+              autoFocus
             />
             <View style={styles.row}>
               <IconButton
@@ -223,7 +238,10 @@ export default function HomeScreen() {
               <IconButton
                 label="キャンセル"
                 icon="close"
-                onPress={() => setInputVisible(false)}
+                onPress={() => {
+                  setInputVisible(false);
+                  setQuickDigits('');
+                }}
                 type="secondary"
                 style={{ flex: 1 }}
               />
@@ -278,13 +296,5 @@ const styles = StyleSheet.create({
   modalItem: { paddingVertical: 12 },
   modalItemText: { color: Colors.text, fontWeight: '700', textAlign: 'center' },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 12,
-    textAlign: 'center',
-    color: Colors.text,
-  },
+  hiddenInput: { height: 0, width: 0 },
 });
