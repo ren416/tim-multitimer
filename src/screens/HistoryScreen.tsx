@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import quotes from '../../assets/data/quotes.json';
@@ -15,6 +15,7 @@ export default function HistoryScreen() {
   const { state } = useTimerState();
   const [range, setRange] = useState<Range>('週');
   const [quote, setQuote] = useState('');
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     try {
@@ -42,12 +43,15 @@ export default function HistoryScreen() {
   const chartData = useMemo(() => {
     const history = state.history.filter(h => h.completedAt && !h.cancelled);
     const buckets: Record<string, number> = {};
-    const add = (key: string, sec: number) => { buckets[key] = (buckets[key] ?? 0) + sec / 60; };
+    const add = (key: string, sec: number) => {
+      // store time in hours for clearer scaling
+      buckets[key] = (buckets[key] ?? 0) + sec / 3600;
+    };
     history.forEach(h => {
       const d = dayjs(h.completedAt!);
-      let key = d.format('MM/DD');
-      if (range === '週') key = `${d.week()}`;
-      if (range === '月') key = d.format('YYYY/MM');
+      let key = d.format('MM/DD'); // 日: 日ごとの使用時間
+      if (range === '週') key = `${d.year()}-W${d.week()}`; // 週: 年と週番号
+      if (range === '月') key = d.format('YYYY/MM'); // 月: 年/月
       if (range === '年') key = d.format('YYYY');
       add(key, h.totalDurationSec);
     });
@@ -111,9 +115,33 @@ export default function HistoryScreen() {
           {chartData.length === 0 ? (
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
-            <VictoryChart>
-              <VictoryAxis />
-              <VictoryBar data={chartData} x="x" y="y" />
+            <VictoryChart
+              width={width - 80}
+              height={220}
+              padding={{ top: 10, bottom: 50, left: 60, right: 20 }}
+              domainPadding={{ x: 20, y: [0, 20] }}
+            >
+              <VictoryAxis
+                style={{
+                  tickLabels: { angle: -45, fontSize: 10, padding: 25 },
+                }}
+              />
+              <VictoryAxis
+                dependentAxis
+                label="時間 (h)"
+                tickFormat={(t) => `${t.toFixed(1)}h`}
+                style={{
+                  axisLabel: { padding: 40 },
+                  tickLabels: { fontSize: 10 },
+                }}
+              />
+              <VictoryBar
+                data={chartData}
+                x="x"
+                y="y"
+                barRatio={0.8}
+                style={{ data: { fill: Colors.primary } }}
+              />
             </VictoryChart>
           )}
         </View>
