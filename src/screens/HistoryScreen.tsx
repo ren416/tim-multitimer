@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -7,6 +7,7 @@ import {
   Pressable,
   useWindowDimensions,
   Modal,
+  Alert,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
@@ -82,20 +83,20 @@ export default function HistoryScreen() {
   const maxSec = chartInfo.data.reduce((m, d) => Math.max(m, d.sec), 0);
   let unitDiv = 1;
   let yMax = 60;
-  let yLabel = '時間 (s)';
-  let yTick = (t: number) => `${t}s`;
+  let yLabel = '時間 (秒)';
+  let yTick = (t: number) => `${t}秒`;
   if (maxSec < 60) {
     yMax = 60;
   } else if (maxSec < 3600) {
     unitDiv = 60;
     yMax = Math.floor(maxSec / 60) + 1;
-    yLabel = '時間 (m)';
-    yTick = (t: number) => `${t}m`;
+    yLabel = '時間 (分)';
+    yTick = (t: number) => `${t}分`;
   } else {
     unitDiv = 3600;
     yMax = Math.floor(maxSec / 3600) + 1;
-    yLabel = '時間 (h)';
-    yTick = (t: number) => `${t}h`;
+    yLabel = '時間 (時)';
+    yTick = (t: number) => `${t}時間`;
   }
   const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
 
@@ -106,8 +107,7 @@ export default function HistoryScreen() {
   // Padding on the right side so that the last bar isn't clipped
   const chartPaddingRight = 20;
 
-  const chartWidth =
-    chartData.length * (BAR_WIDTH + BAR_GAP) + AXIS_WIDTH + chartPaddingRight + BAR_GAP;
+  const chartWidth = chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
 
   const usageInfo = useMemo(() => {
     const entries = state.history.filter(h => h.completedAt && !h.cancelled);
@@ -123,11 +123,15 @@ export default function HistoryScreen() {
     return { data, colors };
   }, [state.history, state.timerSets]);
 
-  const badges = [
-    { label: '初回達成', achieved: stats.sessions > 0 },
-    { label: '7日連続', achieved: stats.streak >= 7 },
-    { label: '30日連続', achieved: stats.streak >= 30 },
-  ];
+
+  useEffect(() => {
+    const milestones = [1, 2, 3, 5, 7, 10, 15, 20, 25, 30];
+    const isMilestone =
+      milestones.includes(stats.streak) || (stats.streak > 30 && stats.streak % 10 === 0);
+    if (isMilestone) {
+      Alert.alert('おめでとうございます！', `${stats.streak}日継続しています！`);
+    }
+  }, [stats.streak]);
 
   return (
     <ScrollView style={styles.container}>
@@ -175,25 +179,13 @@ export default function HistoryScreen() {
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
             <>
-              <View style={{ flexDirection: 'row' }}>
-                <Svg width={AXIS_WIDTH} height={220}>
-                  <VictoryAxis
-                    dependentAxis
-                    orientation="right"
-                    label={yLabel}
-                    tickFormat={yTick}
-                    domain={[0, yMax]}
-                    width={AXIS_WIDTH}
-                    height={220}
-                    padding={{ top: 10, bottom: 50, left: 40, right: 0 }}
-                    style={{
-                      axisLabel: { padding: 40 },
-                      tickLabels: { fontSize: 10 },
-                    }}
-                    standalone={false}
-                  />
-                </Svg>
-                <ScrollView horizontal showsHorizontalScrollIndicator style={{ flex: 1 }}>
+              <View style={{ height: 220 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator
+                  contentContainerStyle={{ paddingLeft: AXIS_WIDTH }}
+                  style={{ flex: 1 }}
+                >
                   <VictoryChart
                     width={chartWidth}
                     height={220}
@@ -215,6 +207,23 @@ export default function HistoryScreen() {
                     />
                   </VictoryChart>
                 </ScrollView>
+                <Svg width={AXIS_WIDTH} height={220} style={{ position: 'absolute', left: 0, top: 0 }}>
+                  <VictoryAxis
+                    dependentAxis
+                    orientation="right"
+                    label={yLabel}
+                    tickFormat={yTick}
+                    domain={[0, yMax]}
+                    width={AXIS_WIDTH}
+                    height={220}
+                    padding={{ top: 10, bottom: 50, left: 40, right: 0 }}
+                    style={{
+                      axisLabel: { padding: 40 },
+                      tickLabels: { fontSize: 10 },
+                    }}
+                    standalone={false}
+                  />
+                </Svg>
               </View>
             </>
           )}
@@ -245,18 +254,6 @@ export default function HistoryScreen() {
             </View>
           </>
         )}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>達成バッジ</Text>
-        <View style={styles.badgesRow}>
-          {badges.map(b => (
-            <View key={b.label} style={[styles.badge, b.achieved && styles.badgeActive]}>
-              <Ionicons name="ribbon" size={24} color={b.achieved ? '#fff' : Colors.subText} />
-              <Text style={[styles.badgeText, b.achieved && { color: '#fff' }]}>{b.label}</Text>
-            </View>
-          ))}
-        </View>
       </View>
       {showPicker && (
         <Modal transparent animationType="slide" visible={showPicker} onRequestClose={() => setShowPicker(false)}>
@@ -336,17 +333,6 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#0B1D2A' },
   sectionTitle: { fontWeight: '700', color: Colors.text, fontSize: 16 },
   legendItem: { marginTop: 4, color: Colors.text },
-  badgesRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
-  badge: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  badgeActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  badgeText: { marginTop: 4, color: Colors.subText, fontSize: 12 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
