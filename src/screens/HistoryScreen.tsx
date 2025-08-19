@@ -100,13 +100,10 @@ export default function HistoryScreen() {
   const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
 
   const BAR_WIDTH = 10;
-  const BAR_GAP = BAR_WIDTH / 10;
-  const AXIS_WIDTH = 60;
-  const chartPaddingRight = 20;
-  const chartWidth = Math.max(
-    width - 80 - AXIS_WIDTH,
-    chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP,
-  );
+  const BAR_GAP = BAR_WIDTH;
+  const chartPadding = { left: 60, right: 20 };
+
+  const chartWidth = chartData.length * (BAR_WIDTH + BAR_GAP) + chartPadding.left + chartPadding.right + BAR_GAP;
 
   const usageInfo = useMemo(() => {
     const entries = state.history.filter(h => h.completedAt && !h.cancelled);
