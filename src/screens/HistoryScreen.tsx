@@ -101,9 +101,13 @@ export default function HistoryScreen() {
 
   const BAR_WIDTH = 10;
   const BAR_GAP = BAR_WIDTH;
-  const chartPadding = { left: 60, right: 20 };
+  // Width reserved for the fixed Y axis on the left side of the chart
+  const AXIS_WIDTH = 60;
+  // Padding on the right side so that the last bar isn't clipped
+  const chartPaddingRight = 20;
 
-  const chartWidth = chartData.length * (BAR_WIDTH + BAR_GAP) + chartPadding.left + chartPadding.right + BAR_GAP;
+  const chartWidth =
+    chartData.length * (BAR_WIDTH + BAR_GAP) + AXIS_WIDTH + chartPaddingRight + BAR_GAP;
 
   const usageInfo = useMemo(() => {
     const entries = state.history.filter(h => h.completedAt && !h.cancelled);
