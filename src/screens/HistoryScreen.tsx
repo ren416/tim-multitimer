@@ -11,6 +11,7 @@ import {
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { VictoryBar, VictoryChart, VictoryAxis, VictoryPie } from 'victory-native';
+import Svg from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import dayjs from 'dayjs';
@@ -99,11 +100,12 @@ export default function HistoryScreen() {
   const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
 
   const BAR_WIDTH = 10;
-  const BAR_GAP = BAR_WIDTH;
-  const chartPadding = { left: 60, right: 20 };
+  const BAR_GAP = BAR_WIDTH / 10;
+  const AXIS_WIDTH = 60;
+  const chartPaddingRight = 20;
   const chartWidth = Math.max(
-    width - 80,
-    chartData.length * (BAR_WIDTH + BAR_GAP) + chartPadding.left + chartPadding.right + BAR_GAP,
+    width - 80 - AXIS_WIDTH,
+    chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP,
   );
 
   const usageInfo = useMemo(() => {
@@ -172,37 +174,47 @@ export default function HistoryScreen() {
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
             <>
-              <ScrollView horizontal showsHorizontalScrollIndicator>
-                <VictoryChart
-                  width={chartWidth}
-                  height={220}
-                  padding={{ top: 10, bottom: 50, left: chartPadding.left, right: chartPadding.right }}
-                  domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
-                  domain={{ y: [0, yMax] }}
-                >
-                  <VictoryAxis
-                    style={{
-                      tickLabels: { angle: -45, fontSize: 10, padding: 25 },
-                    }}
-                  />
+              <View style={{ flexDirection: 'row' }}>
+                <Svg width={AXIS_WIDTH} height={220}>
                   <VictoryAxis
                     dependentAxis
+                    orientation="right"
                     label={yLabel}
                     tickFormat={yTick}
+                    domain={[0, yMax]}
+                    width={AXIS_WIDTH}
+                    height={220}
+                    padding={{ top: 10, bottom: 50, left: 40, right: 0 }}
                     style={{
                       axisLabel: { padding: 40 },
                       tickLabels: { fontSize: 10 },
                     }}
+                    standalone={false}
                   />
-                  <VictoryBar
-                    data={chartData}
-                    x="x"
-                    y="y"
-                    barWidth={BAR_WIDTH}
-                    style={{ data: { fill: Colors.primary } }}
-                  />
-                </VictoryChart>
-              </ScrollView>
+                </Svg>
+                <ScrollView horizontal showsHorizontalScrollIndicator style={{ flex: 1 }}>
+                  <VictoryChart
+                    width={chartWidth}
+                    height={220}
+                    padding={{ top: 10, bottom: 50, left: 0, right: chartPaddingRight }}
+                    domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
+                    domain={{ y: [0, yMax] }}
+                  >
+                    <VictoryAxis
+                      style={{
+                        tickLabels: { angle: -45, fontSize: 10, padding: 25 },
+                      }}
+                    />
+                    <VictoryBar
+                      data={chartData}
+                      x="x"
+                      y="y"
+                      barWidth={BAR_WIDTH}
+                      style={{ data: { fill: Colors.primary } }}
+                    />
+                  </VictoryChart>
+                </ScrollView>
+              </View>
             </>
           )}
         </View>
@@ -220,7 +232,6 @@ export default function HistoryScreen() {
               y="y"
               width={width - 80}
               height={width - 80}
-              innerRadius={(width - 80) / 3}
               colorScale={usageInfo.colors}
               labels={() => null}
             />
