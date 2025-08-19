@@ -1,29 +1,43 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  useWindowDimensions,
+  Modal,
+} from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
-import quotes from '../../assets/data/quotes.json';
 import { VictoryBar, VictoryChart, VictoryAxis, VictoryPie } from 'victory-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 dayjs.extend(weekOfYear);
 
-type Range = '日' | '週' | '月' | '年';
+type Range = '日' | '週';
+
+// 徐々に白に近づけることで色を薄くする
+const lighten = (hex: string, factor: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const nr = Math.round(r + (255 - r) * factor);
+  const ng = Math.round(g + (255 - g) * factor);
+  const nb = Math.round(b + (255 - b) * factor);
+  return `#${((1 << 24) + (nr << 16) + (ng << 8) + nb).toString(16).slice(1)}`;
+};
 
 export default function HistoryScreen() {
   const { state } = useTimerState();
-  const [range, setRange] = useState<Range>('週');
-  const [quote, setQuote] = useState('');
   const { width } = useWindowDimensions();
-
-  useEffect(() => {
-    try {
-      setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-    } catch {
-      setQuote('継続は力なり。');
-    }
-  }, []);
+  const now = dayjs();
+  const [range, setRange] = useState<Range>('週');
+  const [year, setYear] = useState(now.year());
+  const [month, setMonth] = useState(now.month() + 1);
+  const [showPicker, setShowPicker] = useState(false);
 
   const stats = useMemo(() => {
     const entries = state.history.filter(h => h.completedAt && !h.cancelled);
@@ -40,35 +54,71 @@ export default function HistoryScreen() {
     return { totalSec, sessions, avgMin, streak };
   }, [state.history]);
 
-  const chartData = useMemo(() => {
+  const chartInfo = useMemo(() => {
     const history = state.history.filter(h => h.completedAt && !h.cancelled);
     const buckets: Record<string, number> = {};
-    const add = (key: string, sec: number) => {
-      // store time in hours for clearer scaling
-      buckets[key] = (buckets[key] ?? 0) + sec / 3600;
-    };
     history.forEach(h => {
       const d = dayjs(h.completedAt!);
-      let key = d.format('MM/DD'); // 日: 日ごとの使用時間
-      if (range === '週') key = `${d.year()}-W${d.week()}`; // 週: 年と週番号
-      if (range === '月') key = d.format('YYYY/MM'); // 月: 年/月
-      if (range === '年') key = d.format('YYYY');
-      add(key, h.totalDurationSec);
+      if (range === '日') {
+        if (d.year() === year && d.month() + 1 === month) {
+          const key = d.format('MM/DD');
+          buckets[key] = (buckets[key] ?? 0) + h.totalDurationSec;
+        }
+      } else {
+        const start = d.startOf('week');
+        if (start.year() === year && start.month() + 1 === month) {
+          const label = `${start.format('MM/DD')}~${start.add(6, 'day').format('MM/DD')}`;
+          buckets[label] = (buckets[label] ?? 0) + h.totalDurationSec;
+        }
+      }
     });
-    return Object.entries(buckets).sort((a, b) => a[0].localeCompare(b[0])).map(([x, y]) => ({ x, y }));
-  }, [state.history, range]);
+    const data = Object.entries(buckets)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([x, sec]) => ({ x, sec }));
+    return { data };
+  }, [state.history, range, year, month]);
 
-  const usage = useMemo(() => {
+  const maxSec = chartInfo.data.reduce((m, d) => Math.max(m, d.sec), 0);
+  let unitDiv = 1;
+  let yMax = 60;
+  let yLabel = '時間 (s)';
+  let yTick = (t: number) => `${t}s`;
+  if (maxSec < 60) {
+    yMax = 60;
+  } else if (maxSec < 3600) {
+    unitDiv = 60;
+    yMax = Math.floor(maxSec / 60) + 1;
+    yLabel = '時間 (m)';
+    yTick = (t: number) => `${t}m`;
+  } else {
+    unitDiv = 3600;
+    yMax = Math.floor(maxSec / 3600) + 1;
+    yLabel = '時間 (h)';
+    yTick = (t: number) => `${t}h`;
+  }
+  const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
+
+  const BAR_WIDTH = 10;
+  const BAR_GAP = BAR_WIDTH * 2;
+  const chartPadding = { left: 60, right: 20 };
+  const chartWidth = Math.max(
+    width - 80,
+    chartData.length * (BAR_WIDTH + BAR_GAP) + chartPadding.left + chartPadding.right + BAR_GAP,
+  );
+
+  const usageInfo = useMemo(() => {
     const entries = state.history.filter(h => h.completedAt && !h.cancelled);
     const totals: Record<string, number> = {};
     entries.forEach(h => {
       const name = state.timerSets.find(s => s.id === h.timerSetId)?.name ?? 'その他';
       totals[name] = (totals[name] ?? 0) + h.totalDurationSec;
     });
-    return Object.entries(totals).map(([x, y]) => ({ x, y }));
+    const data = Object.entries(totals)
+      .map(([x, y]) => ({ x, y }))
+      .sort((a, b) => b.y - a.y);
+    const colors = data.map((_, i) => lighten('#00BFFF', i / (data.length + 1)));
+    return { data, colors };
   }, [state.history, state.timerSets]);
-  const usageTotal = usage.reduce((s, d) => s + d.y, 0);
-  const usageWithPercent = usage.map(u => ({ ...u, p: usageTotal ? Math.round((u.y / usageTotal) * 100) : 0 }));
 
   const badges = [
     { label: '初回達成', achieved: stats.sessions > 0 },
@@ -78,7 +128,9 @@ export default function HistoryScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.quote}>{quote}</Text>
+      <Pressable onPress={() => setShowPicker(true)}>
+        <Text style={styles.currentYM}>{`${year}年${month}月`}</Text>
+      </Pressable>
 
       <View style={styles.summaryRow}>
         <View style={styles.summaryBox}>
@@ -105,59 +157,74 @@ export default function HistoryScreen() {
 
       <View style={styles.card}>
         <View style={styles.tabs}>
-          {(['日', '週', '月', '年'] as Range[]).map(r => (
+          {(['日', '週'] as Range[]).map(r => (
             <Pressable key={r} onPress={() => setRange(r)} style={[styles.tab, range === r && styles.tabActive]}>
               <Text style={[styles.tabText, range === r && styles.tabTextActive]}>{r}</Text>
             </Pressable>
           ))}
         </View>
-        <View style={{ padding: 12 }}>
+        <View style={{ padding: 12, position: 'relative' }}>
           {chartData.length === 0 ? (
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
-            <VictoryChart
-              width={width - 80}
-              height={220}
-              padding={{ top: 10, bottom: 50, left: 60, right: 20 }}
-              domainPadding={{ x: 20, y: [0, 20] }}
-            >
-              <VictoryAxis
-                style={{
-                  tickLabels: { angle: -45, fontSize: 10, padding: 25 },
-                }}
-              />
-              <VictoryAxis
-                dependentAxis
-                label="時間 (h)"
-                tickFormat={(t) => `${t.toFixed(1)}h`}
-                style={{
-                  axisLabel: { padding: 40 },
-                  tickLabels: { fontSize: 10 },
-                }}
-              />
-              <VictoryBar
-                data={chartData}
-                x="x"
-                y="y"
-                barRatio={0.8}
-                style={{ data: { fill: Colors.primary } }}
-              />
-            </VictoryChart>
+            <>
+              <Text style={styles.chartYear}>{year}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator>
+                <VictoryChart
+                  width={chartWidth}
+                  height={220}
+                  padding={{ top: 10, bottom: 50, left: chartPadding.left, right: chartPadding.right }}
+                  domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
+                  domain={{ y: [0, yMax] }}
+                >
+                  <VictoryAxis
+                    style={{
+                      tickLabels: { angle: -45, fontSize: 10, padding: 25 },
+                    }}
+                  />
+                  <VictoryAxis
+                    dependentAxis
+                    label={yLabel}
+                    tickFormat={yTick}
+                    style={{
+                      axisLabel: { padding: 40 },
+                      tickLabels: { fontSize: 10 },
+                    }}
+                  />
+                  <VictoryBar
+                    data={chartData}
+                    x="x"
+                    y="y"
+                    barWidth={BAR_WIDTH}
+                    style={{ data: { fill: Colors.primary } }}
+                  />
+                </VictoryChart>
+              </ScrollView>
+            </>
           )}
         </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>タイマータイプ別使用状況</Text>
-        {usage.length === 0 ? (
+        {usageInfo.data.length === 0 ? (
           <Text style={{ color: Colors.subText, marginTop: 8 }}>データがありません。</Text>
         ) : (
           <>
-            <VictoryPie data={usage} x="x" y="y" innerRadius={40} colorScale="qualitative" labelComponent={<></>} />
+            <VictoryPie
+              data={usageInfo.data}
+              x="x"
+              y="y"
+              width={width - 80}
+              height={width - 80}
+              innerRadius={(width - 80) / 3}
+              colorScale={usageInfo.colors}
+              labels={() => null}
+            />
             <View style={{ marginTop: 8 }}>
-              {usageWithPercent.map(u => (
+              {usageInfo.data.map((u, idx) => (
                 <Text key={u.x} style={styles.legendItem}>
-                  {u.x} {u.p}%
+                  <Text style={{ color: usageInfo.colors[idx] }}>■</Text>:{u.x}
                 </Text>
               ))}
             </View>
@@ -176,13 +243,36 @@ export default function HistoryScreen() {
           ))}
         </View>
       </View>
+      {showPicker && (
+        <Modal transparent animationType="slide" visible={showPicker} onRequestClose={() => setShowPicker(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.pickerBox}>
+              <View style={styles.pickerRow}>
+                <Picker style={styles.picker} selectedValue={year} onValueChange={v => setYear(v)}>
+                  {Array.from({ length: 21 }, (_, i) => now.year() - 10 + i).map(y => (
+                    <Picker.Item key={y} label={`${y}`} value={y} />
+                  ))}
+                </Picker>
+                <Picker style={styles.picker} selectedValue={month} onValueChange={v => setMonth(v)}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <Picker.Item key={m} label={`${m}`} value={m} />
+                  ))}
+                </Picker>
+              </View>
+              <Pressable onPress={() => setShowPicker(false)} style={styles.pickerDoneBtn}>
+                <Text style={styles.pickerDoneText}>OK</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 16 },
-  quote: { fontStyle: 'italic', color: Colors.subText, marginBottom: 16 },
+  currentYM: { fontWeight: '700', color: Colors.text, fontSize: 18, textAlign: 'center', marginBottom: 16 },
   summaryRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   summaryBox: {
     width: '48%',
@@ -196,7 +286,14 @@ const styles = StyleSheet.create({
   },
   summaryVal: { fontWeight: '700', fontSize: 16, color: Colors.text, marginTop: 4 },
   summaryLabel: { color: Colors.subText, fontSize: 12, marginTop: 2 },
-  card: { backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, marginTop: 20, padding: 12 },
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 20,
+    padding: 12,
+  },
   tabs: { flexDirection: 'row', gap: 8 },
   tab: {
     flex: 1,
@@ -212,6 +309,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#0B1D2A' },
   sectionTitle: { fontWeight: '700', color: Colors.text, fontSize: 16 },
   legendItem: { marginTop: 4, color: Colors.text },
+  chartYear: { position: 'absolute', top: 0, left: 0, color: Colors.subText, fontWeight: '700' },
   badgesRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
   badge: {
     flex: 1,
@@ -223,4 +321,15 @@ const styles = StyleSheet.create({
   },
   badgeActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   badgeText: { marginTop: 4, color: Colors.subText, fontSize: 12 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerBox: { backgroundColor: Colors.card, borderRadius: 16, padding: 16, width: '80%' },
+  pickerRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  picker: { flex: 1 },
+  pickerDoneBtn: { marginTop: 16, alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 8, backgroundColor: Colors.primary, borderRadius: 8 },
+  pickerDoneText: { fontWeight: '700', color: '#0B1D2A' },
 });

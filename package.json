@@ -29,7 +29,8 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "15.8.0",
     "victory-native": "^36.6.11",
-    "expo-font": "~13.0.4"
+    "expo-font": "~13.0.4",
+    "@react-native-picker/picker": "^2.6.1"
   },
   "devDependencies": {
     "@types/react": "~18.2.45",
