@@ -11,6 +11,17 @@ dayjs.extend(weekOfYear);
 
 type Range = '日' | '週' | '月' | '年';
 
+// 徐々に白に近づけることで色を薄くする
+const lighten = (hex: string, factor: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const nr = Math.round(r + (255 - r) * factor);
+  const ng = Math.round(g + (255 - g) * factor);
+  const nb = Math.round(b + (255 - b) * factor);
+  return `#${((1 << 24) + (nr << 16) + (ng << 8) + nb).toString(16).slice(1)}`;
+};
+
 export default function HistoryScreen() {
   const { state } = useTimerState();
   const [range, setRange] = useState<Range>('週');
@@ -40,35 +51,69 @@ export default function HistoryScreen() {
     return { totalSec, sessions, avgMin, streak };
   }, [state.history]);
 
-  const chartData = useMemo(() => {
+  const chartInfo = useMemo(() => {
     const history = state.history.filter(h => h.completedAt && !h.cancelled);
     const buckets: Record<string, number> = {};
+    let year = '';
     const add = (key: string, sec: number) => {
-      // store time in hours for clearer scaling
-      buckets[key] = (buckets[key] ?? 0) + sec / 3600;
+      buckets[key] = (buckets[key] ?? 0) + sec;
     };
     history.forEach(h => {
       const d = dayjs(h.completedAt!);
-      let key = d.format('MM/DD'); // 日: 日ごとの使用時間
-      if (range === '週') key = `${d.year()}-W${d.week()}`; // 週: 年と週番号
-      if (range === '月') key = d.format('YYYY/MM'); // 月: 年/月
-      if (range === '年') key = d.format('YYYY');
-      add(key, h.totalDurationSec);
+      if (range === '日') {
+        add(d.format('MM/DD'), h.totalDurationSec);
+        if (!year) year = d.format('YYYY');
+      } else if (range === '週') {
+        const start = d.startOf('week');
+        const label = `${start.format('MM/DD')}~${start.add(7, 'day').format('MM/DD')}`;
+        add(label, h.totalDurationSec);
+        if (!year) year = start.format('YYYY');
+      } else if (range === '月') {
+        add(d.format('MM'), h.totalDurationSec);
+        if (!year) year = d.format('YYYY');
+      } else {
+        add(d.format('YYYY'), h.totalDurationSec);
+      }
     });
-    return Object.entries(buckets).sort((a, b) => a[0].localeCompare(b[0])).map(([x, y]) => ({ x, y }));
+    const data = Object.entries(buckets)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([x, sec]) => ({ x, sec }));
+    return { data, year };
   }, [state.history, range]);
 
-  const usage = useMemo(() => {
+  const maxSec = chartInfo.data.reduce((m, d) => Math.max(m, d.sec), 0);
+  let unitDiv = 1;
+  let yMax = 60;
+  let yLabel = '時間 (s)';
+  let yTick = (t: number) => `${t}s`;
+  if (maxSec < 60) {
+    yMax = 60;
+  } else if (maxSec < 3600) {
+    unitDiv = 60;
+    yMax = Math.floor(maxSec / 60) + 1;
+    yLabel = '時間 (m)';
+    yTick = (t: number) => `${t}m`;
+  } else {
+    unitDiv = 3600;
+    yMax = Math.floor(maxSec / 3600) + 1;
+    yLabel = '時間 (h)';
+    yTick = (t: number) => `${t}h`;
+  }
+  const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
+
+  const usageInfo = useMemo(() => {
     const entries = state.history.filter(h => h.completedAt && !h.cancelled);
     const totals: Record<string, number> = {};
     entries.forEach(h => {
       const name = state.timerSets.find(s => s.id === h.timerSetId)?.name ?? 'その他';
       totals[name] = (totals[name] ?? 0) + h.totalDurationSec;
     });
-    return Object.entries(totals).map(([x, y]) => ({ x, y }));
+    const data = Object.entries(totals)
+      .map(([x, y]) => ({ x, y }))
+      .sort((a, b) => b.y - a.y);
+    const colors = data.map((_, i) => lighten('#00BFFF', i / (data.length + 1)));
+    return { data, colors };
   }, [state.history, state.timerSets]);
-  const usageTotal = usage.reduce((s, d) => s + d.y, 0);
-  const usageWithPercent = usage.map(u => ({ ...u, p: usageTotal ? Math.round((u.y / usageTotal) * 100) : 0 }));
 
   const badges = [
     { label: '初回達成', achieved: stats.sessions > 0 },
@@ -111,53 +156,66 @@ export default function HistoryScreen() {
             </Pressable>
           ))}
         </View>
-        <View style={{ padding: 12 }}>
+        <View style={{ padding: 12, position: 'relative' }}>
           {chartData.length === 0 ? (
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
-            <VictoryChart
-              width={width - 80}
-              height={220}
-              padding={{ top: 10, bottom: 50, left: 60, right: 20 }}
-              domainPadding={{ x: 20, y: [0, 20] }}
-            >
-              <VictoryAxis
-                style={{
-                  tickLabels: { angle: -45, fontSize: 10, padding: 25 },
-                }}
-              />
-              <VictoryAxis
-                dependentAxis
-                label="時間 (h)"
-                tickFormat={(t) => `${t.toFixed(1)}h`}
-                style={{
-                  axisLabel: { padding: 40 },
-                  tickLabels: { fontSize: 10 },
-                }}
-              />
-              <VictoryBar
-                data={chartData}
-                x="x"
-                y="y"
-                barRatio={0.8}
-                style={{ data: { fill: Colors.primary } }}
-              />
-            </VictoryChart>
+            <>
+              {chartInfo.year ? <Text style={styles.chartYear}>{chartInfo.year}</Text> : null}
+              <VictoryChart
+                width={width - 80}
+                height={220}
+                padding={{ top: 10, bottom: 50, left: 60, right: 20 }}
+                domainPadding={{ x: range === '日' ? [5, 5] : [20, 20], y: [0, 20] }}
+                domain={{ y: [0, yMax] }}
+              >
+                <VictoryAxis
+                  style={{
+                    tickLabels: { angle: -45, fontSize: 10, padding: 25 },
+                  }}
+                />
+                <VictoryAxis
+                  dependentAxis
+                  label={yLabel}
+                  tickFormat={yTick}
+                  style={{
+                    axisLabel: { padding: 40 },
+                    tickLabels: { fontSize: 10 },
+                  }}
+                />
+                <VictoryBar
+                  data={chartData}
+                  x="x"
+                  y="y"
+                  barRatio={range === '日' ? 0.4 : 0.8}
+                  style={{ data: { fill: Colors.primary } }}
+                />
+              </VictoryChart>
+            </>
           )}
         </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>タイマータイプ別使用状況</Text>
-        {usage.length === 0 ? (
+        {usageInfo.data.length === 0 ? (
           <Text style={{ color: Colors.subText, marginTop: 8 }}>データがありません。</Text>
         ) : (
           <>
-            <VictoryPie data={usage} x="x" y="y" innerRadius={40} colorScale="qualitative" labelComponent={<></>} />
+            <VictoryPie
+              data={usageInfo.data}
+              x="x"
+              y="y"
+              width={width - 80}
+              height={width - 80}
+              innerRadius={(width - 80) / 3}
+              colorScale={usageInfo.colors}
+              labels={() => null}
+            />
             <View style={{ marginTop: 8 }}>
-              {usageWithPercent.map(u => (
+              {usageInfo.data.map((u, idx) => (
                 <Text key={u.x} style={styles.legendItem}>
-                  {u.x} {u.p}%
+                  <Text style={{ color: usageInfo.colors[idx] }}>■</Text>:{u.x}
                 </Text>
               ))}
             </View>
@@ -212,6 +270,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#0B1D2A' },
   sectionTitle: { fontWeight: '700', color: Colors.text, fontSize: 16 },
   legendItem: { marginTop: 4, color: Colors.text },
+  chartYear: { position: 'absolute', top: 0, left: 0, color: Colors.subText, fontWeight: '700' },
   badgesRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
   badge: {
     flex: 1,
