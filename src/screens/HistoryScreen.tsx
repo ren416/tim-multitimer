@@ -99,7 +99,7 @@ export default function HistoryScreen() {
   const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
 
   const BAR_WIDTH = 10;
-  const BAR_GAP = BAR_WIDTH * 2;
+  const BAR_GAP = BAR_WIDTH;
   const chartPadding = { left: 60, right: 20 };
   const chartWidth = Math.max(
     width - 80,
@@ -128,8 +128,12 @@ export default function HistoryScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <Pressable onPress={() => setShowPicker(true)}>
+      <Pressable onPress={() => setShowPicker(true)} style={styles.ymSelector}>
         <Text style={styles.currentYM}>{`${year}年${month}月`}</Text>
+        <View style={styles.ymArrows}>
+          <Ionicons name="chevron-up-outline" size={12} color={Colors.text} />
+          <Ionicons name="chevron-down-outline" size={12} color={Colors.text} />
+        </View>
       </Pressable>
 
       <View style={styles.summaryRow}>
@@ -168,7 +172,6 @@ export default function HistoryScreen() {
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
             <>
-              <Text style={styles.chartYear}>{year}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator>
                 <VictoryChart
                   width={chartWidth}
@@ -248,12 +251,12 @@ export default function HistoryScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.pickerBox}>
               <View style={styles.pickerRow}>
-                <Picker style={styles.picker} selectedValue={year} onValueChange={v => setYear(v)}>
+                <Picker style={styles.picker} selectedValue={year} onValueChange={v => setYear(Number(v))}>
                   {Array.from({ length: 21 }, (_, i) => now.year() - 10 + i).map(y => (
                     <Picker.Item key={y} label={`${y}`} value={y} />
                   ))}
                 </Picker>
-                <Picker style={styles.picker} selectedValue={month} onValueChange={v => setMonth(v)}>
+                <Picker style={styles.picker} selectedValue={month} onValueChange={v => setMonth(Number(v))}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                     <Picker.Item key={m} label={`${m}`} value={m} />
                   ))}
@@ -272,7 +275,19 @@ export default function HistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 16 },
-  currentYM: { fontWeight: '700', color: Colors.text, fontSize: 18, textAlign: 'center', marginBottom: 16 },
+  ymSelector: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 16,
+  },
+  currentYM: { fontWeight: '700', color: Colors.text, fontSize: 18 },
+  ymArrows: { marginLeft: 8, justifyContent: 'center' },
   summaryRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   summaryBox: {
     width: '48%',
@@ -309,7 +324,6 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#0B1D2A' },
   sectionTitle: { fontWeight: '700', color: Colors.text, fontSize: 16 },
   legendItem: { marginTop: 4, color: Colors.text },
-  chartYear: { position: 'absolute', top: 0, left: 0, color: Colors.subText, fontWeight: '700' },
   badgesRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
   badge: {
     flex: 1,
