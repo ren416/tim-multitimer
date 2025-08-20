@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
-import { VictoryBar, VictoryChart, VictoryAxis, VictoryPie } from 'victory-native';
-import Svg from 'react-native-svg';
+import { VictoryBar, VictoryChart, VictoryAxis, VictoryPie, VictoryLabel } from 'victory-native';
+import Svg, { Line } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import dayjs from 'dayjs';
@@ -83,31 +83,36 @@ export default function HistoryScreen() {
   const maxSec = chartInfo.data.reduce((m, d) => Math.max(m, d.sec), 0);
   let unitDiv = 1;
   let yMax = 60;
-  let yLabel = '時間 (秒)';
-  let yTick = (t: number) => `${t}秒`;
+  let yUnit = '秒';
   if (maxSec < 60) {
     yMax = 60;
   } else if (maxSec < 3600) {
     unitDiv = 60;
     yMax = Math.floor(maxSec / 60) + 1;
-    yLabel = '時間 (分)';
-    yTick = (t: number) => `${t}分`;
+    yUnit = '分';
   } else {
     unitDiv = 3600;
     yMax = Math.floor(maxSec / 3600) + 1;
-    yLabel = '時間 (時)';
-    yTick = (t: number) => `${t}時間`;
+    yUnit = '時間';
   }
+  const yLabel = `時間 (${yUnit})`;
+  const yTick = (t: number) => `${t}${yUnit}`;
   const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
 
   const BAR_WIDTH = 10;
   const BAR_GAP = BAR_WIDTH;
   // Width reserved for the fixed Y axis on the left side of the chart
   const AXIS_WIDTH = 60;
+  // Additional fixed length of the x-axis line that stays visible
+  const X_AXIS_LINE_LENGTH = 40;
+  // Dimensions for the chart and axis layout
+  const CHART_HEIGHT = 220;
+  const CHART_PADDING_BOTTOM = 50;
   // Padding on the right side so that the last bar isn't clipped
   const chartPaddingRight = 20;
 
-  const chartWidth = chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
+  const chartWidth =
+    chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
 
   const usageInfo = useMemo(() => {
     const entries = state.history.filter(h => h.completedAt && !h.cancelled);
@@ -179,17 +184,19 @@ export default function HistoryScreen() {
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
             <>
-              <View style={{ height: 220 }}>
+              <View style={{ height: CHART_HEIGHT, overflow: 'hidden' }}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator
                   contentContainerStyle={{ paddingLeft: AXIS_WIDTH }}
                   style={{ flex: 1 }}
+                  bounces={false}
+                  overScrollMode="never"
                 >
                   <VictoryChart
                     width={chartWidth}
-                    height={220}
-                    padding={{ top: 10, bottom: 50, left: 0, right: chartPaddingRight }}
+                    height={CHART_HEIGHT}
+                    padding={{ top: 10, bottom: CHART_PADDING_BOTTOM, left: 0, right: chartPaddingRight }}
                     domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
                     domain={{ y: [0, yMax] }}
                   >
@@ -207,7 +214,12 @@ export default function HistoryScreen() {
                     />
                   </VictoryChart>
                 </ScrollView>
-                <Svg width={AXIS_WIDTH} height={220} style={{ position: 'absolute', left: 0, top: 0 }}>
+                <Svg
+                  width={AXIS_WIDTH}
+                  height={CHART_HEIGHT}
+                  style={{ position: 'absolute', left: 0, top: 0, backgroundColor: Colors.card }}
+                  pointerEvents="none"
+                >
                   <VictoryAxis
                     dependentAxis
                     orientation="right"
@@ -215,13 +227,29 @@ export default function HistoryScreen() {
                     tickFormat={yTick}
                     domain={[0, yMax]}
                     width={AXIS_WIDTH}
-                    height={220}
-                    padding={{ top: 10, bottom: 50, left: 40, right: 0 }}
+                    height={CHART_HEIGHT}
+                    padding={{ top: 10, bottom: CHART_PADDING_BOTTOM, left: 40, right: 0 }}
                     style={{
                       axisLabel: { padding: 40 },
                       tickLabels: { fontSize: 10, textAnchor: 'end', fill: Colors.text },
                     }}
+                    tickLabelComponent={<VictoryLabel dx={-12} />}
                     standalone={false}
+                  />
+                </Svg>
+                <Svg
+                  width={X_AXIS_LINE_LENGTH}
+                  height={CHART_HEIGHT}
+                  style={{ position: 'absolute', left: AXIS_WIDTH, top: 0 }}
+                  pointerEvents="none"
+                >
+                  <Line
+                    x1={0}
+                    y1={CHART_HEIGHT - CHART_PADDING_BOTTOM}
+                    x2={X_AXIS_LINE_LENGTH}
+                    y2={CHART_HEIGHT - CHART_PADDING_BOTTOM}
+                    stroke={Colors.text}
+                    strokeWidth={1}
                   />
                 </Svg>
               </View>
