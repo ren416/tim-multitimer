@@ -219,7 +219,7 @@ export default function HistoryScreen() {
                     padding={{ top: 10, bottom: 50, left: 40, right: 0 }}
                     style={{
                       axisLabel: { padding: 40 },
-                      tickLabels: { fontSize: 10 },
+                      tickLabels: { fontSize: 10, textAnchor: 'end', fill: Colors.text },
                     }}
                     standalone={false}
                   />
