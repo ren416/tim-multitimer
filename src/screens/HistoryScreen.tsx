@@ -103,8 +103,11 @@ export default function HistoryScreen() {
   const BAR_GAP = BAR_WIDTH;
   // Width reserved for the fixed Y axis on the left side of the chart
   const AXIS_WIDTH = 60;
-  // Additional fixed length of the x-axis line that stays visible
-  const X_AXIS_LINE_LENGTH = 40;
+  // Length of the x-axis line extending into the chart area
+  // Computed so that the line spans twice the distance from the chart's center
+  // to the vertical axis, effectively leaving the same margin as the Y axis on
+  // the right side of the frame
+  const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
   // Dimensions for the chart and axis layout
   const CHART_HEIGHT = 220;
   const CHART_PADDING_BOTTOM = 50;
