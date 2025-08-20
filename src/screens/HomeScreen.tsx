@@ -14,6 +14,7 @@ import { formatHMS } from '../utils/format';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, G } from 'react-native-svg';
 
 export default function HomeScreen() {
   const { state, dispatch } = useTimerState();
@@ -33,6 +34,8 @@ export default function HomeScreen() {
   const [runCount, setRunCount] = useState(0);
   const [totalSec, setTotalSec] = useState(0);
   const historyRef = useRef({ id: historyId, total: totalSec, run: runCount });
+  const [displayMode, setDisplayMode] = useState<'simple' | 'bar' | 'circle'>('simple');
+  const [quickInitial, setQuickInitial] = useState(0);
 
   useEffect(() => {
     indexRef.current = index;
@@ -47,12 +50,111 @@ export default function HomeScreen() {
     [selectedId, state.timerSets]
   );
 
+  const totalDuration = useMemo(() => {
+    if (selectedSet) {
+      return selectedSet.timers.reduce((sum, t) => sum + t.durationSec, 0);
+    }
+    return quickInitial;
+  }, [selectedSet, quickInitial]);
+
+  const elapsed = useMemo(() => {
+    if (selectedSet) {
+      const past = selectedSet.timers
+        .slice(0, index)
+        .reduce((sum, t) => sum + t.durationSec, 0);
+      const current = selectedSet.timers[index]?.durationSec ?? 0;
+      return past + (current - remaining);
+    }
+    return quickInitial - remaining;
+  }, [selectedSet, index, remaining, quickInitial]);
+
+  const progress = totalDuration > 0 ? elapsed / totalDuration : 0;
+
+  const markers = useMemo(() => {
+    if (!selectedSet) return [] as number[];
+    const total = selectedSet.timers.reduce((sum, t) => sum + t.durationSec, 0);
+    let cum = 0;
+    return selectedSet.timers.map(t => {
+      cum += t.durationSec;
+      return cum / total;
+    });
+  }, [selectedSet]);
+
+  const renderTimeDisplay = () => {
+    const timeText = (
+      <Text style={styles.time}>
+        {selectedSet || running || remaining > 0
+          ? formatHMS(remaining)
+          : formatQuickDisplay(quickDigits)}
+      </Text>
+    );
+
+    if (displayMode === 'bar') {
+      return (
+        <View style={{ alignItems: 'center' }}>
+          {timeText}
+          <View style={styles.barTrack}>
+            <View style={[styles.barProgress, { width: `${progress * 100}%` }]} />
+            {markers.map((m, idx) => (
+              <View key={idx} style={[styles.barMarker, { left: `${m * 100}%` }]} />
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    if (displayMode === 'circle') {
+      const size = 160;
+      const stroke = 8;
+      const radius = (size - stroke) / 2;
+      const circumference = 2 * Math.PI * radius;
+      return (
+        <View style={{ marginVertical: 12 }}>
+          <View style={{ width: size, height: size }}>
+            <Svg width={size} height={size}>
+              <G rotation="-90" origin={`${size / 2},${size / 2}`}>
+                <Circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  stroke={Colors.border}
+                  strokeWidth={stroke}
+                  fill="none"
+                />
+                <Circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  stroke={Colors.primary}
+                  strokeWidth={stroke}
+                  fill="none"
+                  strokeDasharray={`${circumference} ${circumference}`}
+                  strokeDashoffset={(1 - progress) * circumference}
+                />
+                {markers.map((m, idx) => {
+                  const angle = 2 * Math.PI * m;
+                  const x = size / 2 + radius * Math.cos(angle);
+                  const y = size / 2 + radius * Math.sin(angle);
+                  return <Circle key={idx} cx={x} cy={y} r={4} fill={Colors.primaryDark} />;
+                })}
+              </G>
+            </Svg>
+            <View style={styles.circleCenter}>{timeText}</View>
+          </View>
+        </View>
+      );
+    }
+
+    return timeText;
+  };
+
   useEffect(() => {
     // reset when switching sets
     setIndex(0);
     setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
     setRunning(false);
     setQuickDigits('');
+    setQuickInitial(0);
     setHistoryId(null);
     setRunCount(0);
     setTotalSec(0);
@@ -95,21 +197,24 @@ export default function HomeScreen() {
   };
 
   const formatQuickDisplay = (d: string) => {
-    const padded = d.padStart(4, '-');
-    return `${padded.slice(0, 2)}:${padded.slice(2, 4)}`;
+    if (!d) return '00:00';
+    const s = d.slice(-2).padStart(2, '0');
+    const m = d.slice(0, -2) || '0';
+    return `${m}:${s}`;
   };
 
   const handleDigitChange = (text: string) => {
     const digits = text.replace(/[^0-9]/g, '');
-    setQuickDigits(digits.slice(-4));
+    setQuickDigits(digits.slice(-6));
   };
 
   const confirmQuick = () => {
-    const padded = quickDigits.padStart(4, '0');
-    const m = parseInt(padded.slice(0, 2), 10);
-    const s = parseInt(padded.slice(2, 4), 10);
+    const digits = quickDigits || '0';
+    const m = parseInt(digits.slice(0, -2) || '0', 10);
+    const s = parseInt(digits.slice(-2) || '0', 10);
     const sec = m * 60 + s;
     setRemaining(sec);
+    setQuickInitial(sec);
     setQuickDigits('');
     setInputVisible(false);
   };
@@ -172,6 +277,7 @@ export default function HomeScreen() {
     } else {
       setRemaining(0);
       setQuickDigits('');
+      setQuickInitial(0);
     }
   };
 
@@ -229,6 +335,29 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
+          <View style={styles.displaySwitch}>
+            <Pressable onPress={() => setDisplayMode('simple')}>
+              <Ionicons
+                name="time-outline"
+                size={20}
+                color={displayMode === 'simple' ? Colors.primary : Colors.subText}
+              />
+            </Pressable>
+            <Pressable onPress={() => setDisplayMode('bar')}>
+              <Ionicons
+                name="stats-chart-outline"
+                size={20}
+                color={displayMode === 'bar' ? Colors.primary : Colors.subText}
+              />
+            </Pressable>
+            <Pressable onPress={() => setDisplayMode('circle')}>
+              <Ionicons
+                name="ellipse-outline"
+                size={20}
+                color={displayMode === 'circle' ? Colors.primary : Colors.subText}
+              />
+            </Pressable>
+          </View>
           {selectedSet ? (
             <>
               <Text style={styles.infoText}>{`タイマーセット名：${selectedSet.name}`}</Text>
@@ -237,13 +366,7 @@ export default function HomeScreen() {
           ) : (
             <Text style={styles.waitingName}>"クイックタイマー"</Text>
           )}
-          <Pressable onPress={handleTimePress}>
-            <Text style={styles.time}>
-              {selectedSet || running || remaining > 0
-                ? formatHMS(remaining)
-                : formatQuickDisplay(quickDigits)}
-            </Text>
-          </Pressable>
+          <Pressable onPress={handleTimePress}>{renderTimeDisplay()}</Pressable>
           <View style={styles.row}>
             <IconButton
               label="開始"
@@ -382,6 +505,40 @@ const styles = StyleSheet.create({
   infoText: { marginTop: 8, color: Colors.text },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
+  displaySwitch: { alignSelf: 'flex-end', flexDirection: 'row', gap: 8 },
+  barTrack: {
+    position: 'relative',
+    width: '80%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.border,
+    marginTop: 8,
+  },
+  barProgress: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: Colors.primary,
+    borderRadius: 3,
+  },
+  barMarker: {
+    position: 'absolute',
+    top: -2,
+    width: 2,
+    height: 10,
+    backgroundColor: Colors.primaryDark,
+    transform: [{ translateX: -1 }],
+  },
+  circleCenter: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',

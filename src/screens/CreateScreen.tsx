@@ -8,6 +8,8 @@ import {
   Pressable,
   Alert,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -224,7 +226,11 @@ export default function CreateScreen({ route, navigation }: any) {
   }, [route?.params?.editId]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       {stage === 'choose' && (
         <View style={{ gap: 12 }}>
           <IconButton
@@ -317,7 +323,8 @@ export default function CreateScreen({ route, navigation }: any) {
           />
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
