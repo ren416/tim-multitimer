@@ -90,10 +90,17 @@ export default function HomeScreen() {
     });
   }, [selectedSet]);
 
+  const clampProgress = (p: number) => {
+    if (!isFinite(p)) return 0;
+    if (p < 0) return 0;
+    if (p > 1) return 1;
+    return p;
+  };
+
   useEffect(() => {
     elapsedRef.current = elapsed;
     lastUpdateRef.current = Date.now();
-    setProgress(totalDuration > 0 ? elapsed / totalDuration : 0);
+    setProgress(totalDuration > 0 ? clampProgress(elapsed / totalDuration) : 0);
   }, [elapsed, totalDuration]);
 
   useEffect(() => {
@@ -102,7 +109,7 @@ export default function HomeScreen() {
       const diff = (Date.now() - lastUpdateRef.current) / 1000;
       const estElapsed = elapsedRef.current + diff;
       const p = totalDuration > 0 ? estElapsed / totalDuration : 0;
-      setProgress(p);
+      setProgress(clampProgress(p));
       if (running) raf = requestAnimationFrame(tick);
     };
     if (running) raf = requestAnimationFrame(tick);
