@@ -7,7 +7,6 @@ import {
   Pressable,
   Modal,
   TextInput,
-  PanResponder,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
@@ -35,7 +34,7 @@ export default function HomeScreen() {
   const [runCount, setRunCount] = useState(0);
   const [totalSec, setTotalSec] = useState(0);
   const historyRef = useRef({ id: historyId, total: totalSec, run: runCount });
-  const [displayMode, setDisplayMode] = useState<'simple' | 'bar' | 'circle'>('simple');
+  const [modeIndex, setModeIndex] = useState(0);
   const [quickInitial, setQuickInitial] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -47,10 +46,11 @@ export default function HomeScreen() {
   );
 
   const modes: Array<'simple' | 'bar' | 'circle'> = ['simple', 'bar', 'circle'];
-  const changeDisplayMode = (dir: number) => {
-    const idx = modes.indexOf(displayMode);
-    const next = (idx + dir + modes.length) % modes.length;
-    setDisplayMode(modes[next]);
+  const scrollRef = useRef<ScrollView>(null);
+  const handlePageScroll = (e: any) => {
+    const { contentOffset, layoutMeasurement } = e.nativeEvent;
+    const idx = Math.round(contentOffset.x / layoutMeasurement.width);
+    if (idx !== modeIndex) setModeIndex(idx);
   };
 
   useEffect(() => {
@@ -90,10 +90,17 @@ export default function HomeScreen() {
     });
   }, [selectedSet]);
 
+  const clampProgress = (p: number) => {
+    if (!isFinite(p)) return 0;
+    if (p < 0) return 0;
+    if (p > 1) return 1;
+    return p;
+  };
+
   useEffect(() => {
     elapsedRef.current = elapsed;
     lastUpdateRef.current = Date.now();
-    setProgress(totalDuration > 0 ? elapsed / totalDuration : 0);
+    setProgress(totalDuration > 0 ? clampProgress(elapsed / totalDuration) : 0);
   }, [elapsed, totalDuration]);
 
   useEffect(() => {
@@ -102,14 +109,14 @@ export default function HomeScreen() {
       const diff = (Date.now() - lastUpdateRef.current) / 1000;
       const estElapsed = elapsedRef.current + diff;
       const p = totalDuration > 0 ? estElapsed / totalDuration : 0;
-      setProgress(p);
+      setProgress(clampProgress(p));
       if (running) raf = requestAnimationFrame(tick);
     };
     if (running) raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [running, totalDuration]);
 
-  const renderTimeDisplay = () => {
+  const renderTimeDisplay = (mode: 'simple' | 'bar' | 'circle') => {
     const timeText = (
       <Text style={styles.time}>
         {selectedSet || running || remaining > 0
@@ -118,9 +125,9 @@ export default function HomeScreen() {
       </Text>
     );
 
-    if (displayMode === 'bar') {
+    if (mode === 'bar') {
       return (
-        <View style={styles.displayFrame} {...panResponder.panHandlers}>
+        <View style={styles.displayFrame}>
           {timeText}
           <View style={styles.barTrack}>
             <View style={[styles.barProgress, { width: `${progress * 100}%` }]} />
@@ -132,13 +139,13 @@ export default function HomeScreen() {
       );
     }
 
-    if (displayMode === 'circle') {
+    if (mode === 'circle') {
       const size = 200;
       const stroke = 8;
       const radius = (size - stroke) / 2;
       const circumference = 2 * Math.PI * radius;
       return (
-        <View style={styles.displayFrame} {...panResponder.panHandlers}>
+        <View style={styles.displayFrame}>
           <View style={{ width: size, height: size }}>
             <Svg width={size} height={size}>
               <G rotation="-90" origin={`${size / 2},${size / 2}`}>
@@ -174,11 +181,7 @@ export default function HomeScreen() {
       );
     }
 
-    return (
-      <View style={styles.displayFrame} {...panResponder.panHandlers}>
-        {timeText}
-      </View>
-    );
+    return <View style={styles.displayFrame}>{timeText}</View>;
   };
 
   useEffect(() => {
@@ -228,21 +231,6 @@ export default function HomeScreen() {
     setQuickDigits('');
     setInputVisible(true);
   };
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderRelease: (_, g) => {
-        if (g.dx > 20) {
-          changeDisplayMode(-1);
-        } else if (g.dx < -20) {
-          changeDisplayMode(1);
-        } else {
-          handleTimePress();
-        }
-      },
-    })
-  ).current;
 
   const formatQuickDisplay = (d: string) => {
     if (!d) return '00:00';
@@ -391,7 +379,30 @@ export default function HomeScreen() {
           ) : (
             <Text style={styles.waitingName}>"クイックタイマー"</Text>
           )}
-          {renderTimeDisplay()}
+          <View style={styles.displayPager}>
+            <ScrollView
+              ref={scrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handlePageScroll}
+              style={{ width: 240 }}
+            >
+              {modes.map(m => (
+                <Pressable key={m} onPress={handleTimePress}>
+                  {renderTimeDisplay(m)}
+                </Pressable>
+              ))}
+            </ScrollView>
+            <View style={styles.pageControl}>
+              {modes.map((_, idx) => (
+                <View
+                  key={idx}
+                  style={[styles.dot, idx === modeIndex && styles.activeDot]}
+                />
+              ))}
+            </View>
+          </View>
           <View style={styles.row}>
             <IconButton
               label="開始"
@@ -530,6 +541,10 @@ const styles = StyleSheet.create({
   infoText: { marginTop: 8, color: Colors.text },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
+  displayPager: { alignItems: 'center' },
+  pageControl: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
+  activeDot: { backgroundColor: Colors.primary },
   displayFrame: {
     width: 240,
     height: 240,
