@@ -7,6 +7,7 @@ import {
   Pressable,
   Modal,
   TextInput,
+  PanResponder,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
@@ -36,6 +37,28 @@ export default function HomeScreen() {
   const historyRef = useRef({ id: historyId, total: totalSec, run: runCount });
   const [displayMode, setDisplayMode] = useState<'simple' | 'bar' | 'circle'>('simple');
   const [quickInitial, setQuickInitial] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  const elapsedRef = useRef(0);
+  const lastUpdateRef = useRef(Date.now());
+  const modes: Array<'simple' | 'bar' | 'circle'> = ['simple', 'bar', 'circle'];
+  const changeDisplayMode = (dir: number) => {
+    const idx = modes.indexOf(displayMode);
+    const next = (idx + dir + modes.length) % modes.length;
+    setDisplayMode(modes[next]);
+  };
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx > 20) {
+          changeDisplayMode(-1);
+        } else if (g.dx < -20) {
+          changeDisplayMode(1);
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     indexRef.current = index;
@@ -68,7 +91,6 @@ export default function HomeScreen() {
     return quickInitial - remaining;
   }, [selectedSet, index, remaining, quickInitial]);
 
-  const progress = totalDuration > 0 ? elapsed / totalDuration : 0;
 
   const markers = useMemo(() => {
     if (!selectedSet) return [] as number[];
@@ -79,6 +101,25 @@ export default function HomeScreen() {
       return cum / total;
     });
   }, [selectedSet]);
+
+  useEffect(() => {
+    elapsedRef.current = elapsed;
+    lastUpdateRef.current = Date.now();
+    setProgress(totalDuration > 0 ? elapsed / totalDuration : 0);
+  }, [elapsed, totalDuration]);
+
+  useEffect(() => {
+    let raf: number;
+    const tick = () => {
+      const diff = (Date.now() - lastUpdateRef.current) / 1000;
+      const estElapsed = elapsedRef.current + diff;
+      const p = totalDuration > 0 ? estElapsed / totalDuration : 0;
+      setProgress(p);
+      if (running) raf = requestAnimationFrame(tick);
+    };
+    if (running) raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [running, totalDuration]);
 
   const renderTimeDisplay = () => {
     const timeText = (
@@ -91,7 +132,7 @@ export default function HomeScreen() {
 
     if (displayMode === 'bar') {
       return (
-        <View style={{ alignItems: 'center' }}>
+        <View style={styles.displayFrame} {...panResponder.panHandlers}>
           {timeText}
           <View style={styles.barTrack}>
             <View style={[styles.barProgress, { width: `${progress * 100}%` }]} />
@@ -104,12 +145,12 @@ export default function HomeScreen() {
     }
 
     if (displayMode === 'circle') {
-      const size = 160;
+      const size = 200;
       const stroke = 8;
       const radius = (size - stroke) / 2;
       const circumference = 2 * Math.PI * radius;
       return (
-        <View style={{ marginVertical: 12 }}>
+        <View style={styles.displayFrame} {...panResponder.panHandlers}>
           <View style={{ width: size, height: size }}>
             <Svg width={size} height={size}>
               <G rotation="-90" origin={`${size / 2},${size / 2}`}>
@@ -145,7 +186,11 @@ export default function HomeScreen() {
       );
     }
 
-    return timeText;
+    return (
+      <View style={styles.displayFrame} {...panResponder.panHandlers}>
+        {timeText}
+      </View>
+    );
   };
 
   useEffect(() => {
@@ -335,29 +380,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
-          <View style={styles.displaySwitch}>
-            <Pressable onPress={() => setDisplayMode('simple')}>
-              <Ionicons
-                name="time-outline"
-                size={20}
-                color={displayMode === 'simple' ? Colors.primary : Colors.subText}
-              />
-            </Pressable>
-            <Pressable onPress={() => setDisplayMode('bar')}>
-              <Ionicons
-                name="stats-chart-outline"
-                size={20}
-                color={displayMode === 'bar' ? Colors.primary : Colors.subText}
-              />
-            </Pressable>
-            <Pressable onPress={() => setDisplayMode('circle')}>
-              <Ionicons
-                name="ellipse-outline"
-                size={20}
-                color={displayMode === 'circle' ? Colors.primary : Colors.subText}
-              />
-            </Pressable>
-          </View>
           {selectedSet ? (
             <>
               <Text style={styles.infoText}>{`タイマーセット名：${selectedSet.name}`}</Text>
@@ -505,14 +527,21 @@ const styles = StyleSheet.create({
   infoText: { marginTop: 8, color: Colors.text },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
-  displaySwitch: { alignSelf: 'flex-end', flexDirection: 'row', gap: 8 },
+  displayFrame: {
+    width: 240,
+    height: 240,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 12,
+    padding: 12,
+  },
   barTrack: {
     position: 'relative',
     width: '80%',
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.border,
-    marginTop: 8,
+    marginTop: 20,
   },
   barProgress: {
     position: 'absolute',
