@@ -41,24 +41,17 @@ export default function HomeScreen() {
 
   const elapsedRef = useRef(0);
   const lastUpdateRef = useRef(Date.now());
+  const selectedSet = useMemo(
+    () => state.timerSets.find(s => s.id === selectedId) ?? null,
+    [selectedId, state.timerSets]
+  );
+
   const modes: Array<'simple' | 'bar' | 'circle'> = ['simple', 'bar', 'circle'];
   const changeDisplayMode = (dir: number) => {
     const idx = modes.indexOf(displayMode);
     const next = (idx + dir + modes.length) % modes.length;
     setDisplayMode(modes[next]);
   };
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20,
-      onPanResponderRelease: (_, g) => {
-        if (g.dx > 20) {
-          changeDisplayMode(-1);
-        } else if (g.dx < -20) {
-          changeDisplayMode(1);
-        }
-      },
-    })
-  ).current;
 
   useEffect(() => {
     indexRef.current = index;
@@ -67,11 +60,6 @@ export default function HomeScreen() {
   useEffect(() => {
     historyRef.current = { id: historyId, total: totalSec, run: runCount };
   }, [historyId, totalSec, runCount]);
-
-  const selectedSet = useMemo(
-    () => state.timerSets.find(s => s.id === selectedId) ?? null,
-    [selectedId, state.timerSets]
-  );
 
   const totalDuration = useMemo(() => {
     if (selectedSet) {
@@ -241,6 +229,21 @@ export default function HomeScreen() {
     setInputVisible(true);
   };
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx > 20) {
+          changeDisplayMode(-1);
+        } else if (g.dx < -20) {
+          changeDisplayMode(1);
+        } else {
+          handleTimePress();
+        }
+      },
+    })
+  ).current;
+
   const formatQuickDisplay = (d: string) => {
     if (!d) return '00:00';
     const s = d.slice(-2).padStart(2, '0');
@@ -388,7 +391,7 @@ export default function HomeScreen() {
           ) : (
             <Text style={styles.waitingName}>"クイックタイマー"</Text>
           )}
-          <Pressable onPress={handleTimePress}>{renderTimeDisplay()}</Pressable>
+          {renderTimeDisplay()}
           <View style={styles.row}>
             <IconButton
               label="開始"
