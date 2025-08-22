@@ -8,6 +8,7 @@ export type Timer = {
   label: string;
   durationSec: number;
   note?: string;
+  notify?: boolean;
 };
 
 export type TimerSet = {
@@ -41,6 +42,7 @@ export type Settings = {
   primaryColor?: string;
   keepAwake?: boolean;
   enableNotifications: boolean;
+  notificationVolume: number;
 };
 
 type State = {
@@ -70,6 +72,7 @@ const initial: State = {
     theme: 'light',
     enableNotifications: true,
     keepAwake: true,
+    notificationVolume: 1,
   },
   hiddenTimerSetIds: [],
 };
@@ -189,7 +192,15 @@ export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children})
       try {
         const s = await AsyncStorage.getItem(STORAGE_KEY);
         if (s) {
-          dispatch({ type: 'HYDRATE', payload: JSON.parse(s) });
+          const parsed = JSON.parse(s);
+          dispatch({
+            type: 'HYDRATE',
+            payload: {
+              ...initial,
+              ...parsed,
+              settings: { ...initial.settings, ...parsed.settings },
+            },
+          });
         } else {
           // Seed example
           const example: Omit<TimerSet,'id'|'createdAt'|'updatedAt'> = {
@@ -197,10 +208,10 @@ export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children})
             description: '25分集中 + 5分休憩を2セット',
             sound: 'beep',
             timers: [
-              { id: uuidv4(), label: '集中 1', durationSec: 25*60 },
-              { id: uuidv4(), label: '休憩 1', durationSec: 5*60 },
-              { id: uuidv4(), label: '集中 2', durationSec: 25*60 },
-              { id: uuidv4(), label: '休憩 2', durationSec: 5*60 },
+              { id: uuidv4(), label: '集中 1', durationSec: 25*60, notify: true },
+              { id: uuidv4(), label: '休憩 1', durationSec: 5*60, notify: true },
+              { id: uuidv4(), label: '集中 2', durationSec: 25*60, notify: true },
+              { id: uuidv4(), label: '休憩 2', durationSec: 5*60, notify: true },
             ]
           };
           const now = dayjs().toISOString();

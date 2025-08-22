@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Switch, Pressable } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,19 @@ export default function SettingsScreen({ navigation }: any) {
           <Switch
             value={state.settings.keepAwake}
             onValueChange={v => dispatch({ type: 'UPDATE_SETTINGS', payload: { keepAwake: v } })}
+          />
+        </View>
+        <View style={{ marginTop: 12 }}>
+          <Text style={styles.label}>通知音量</Text>
+          <Slider
+            style={{ marginTop: 8 }}
+            value={state.settings.notificationVolume}
+            onValueChange={v =>
+              dispatch({ type: 'UPDATE_SETTINGS', payload: { notificationVolume: v } })
+            }
+            minimumValue={0}
+            maximumValue={1}
+            step={0.1}
           />
         </View>
       </View>

@@ -24,7 +24,7 @@ type Stage =
   | 'selectExisting'
   | 'existingTimers';
 
-type TimerInput = { id?: string; label?: string; min: string; sec: string };
+type TimerInput = { id?: string; label?: string; min: string; sec: string; notify: boolean };
 
 export default function CreateScreen({ route, navigation }: any) {
   const { state, dispatch } = useTimerState();
@@ -94,7 +94,7 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('作成できません', 'セット名を入力してください。');
       return;
     }
-    setTimers([{ label: '', min: '', sec: '' }]);
+    setTimers([{ label: '', min: '', sec: '', notify: true }]);
     setStage('newTimers');
   };
 
@@ -108,6 +108,7 @@ export default function CreateScreen({ route, navigation }: any) {
         label: t.label,
         min: String(Math.floor(t.durationSec / 60)),
         sec: String(t.durationSec % 60).padStart(2, '0'),
+        notify: t.notify !== false,
       }))
     );
     setStage('existingTimers');
@@ -115,8 +116,8 @@ export default function CreateScreen({ route, navigation }: any) {
 
   const updateTimer = (
     index: number,
-    field: 'label' | 'min' | 'sec',
-    value: string,
+    field: 'label' | 'min' | 'sec' | 'notify',
+    value: string | boolean,
   ) => {
     setTimers(prev =>
       prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
@@ -124,7 +125,7 @@ export default function CreateScreen({ route, navigation }: any) {
   };
 
   const addTimerRow = () =>
-    setTimers(prev => [...prev, { label: '', min: '', sec: '' }]);
+    setTimers(prev => [...prev, { label: '', min: '', sec: '', notify: true }]);
 
   const saveNew = () => {
     const parsed = timers
@@ -133,7 +134,12 @@ export default function CreateScreen({ route, navigation }: any) {
         const s = parseInt(t.sec || '0', 10);
         const total = m * 60 + s;
         if (total <= 0) return null;
-        return { id: uuidv4(), label: t.label || `タイマー${i + 1}`, durationSec: total };
+        return {
+          id: uuidv4(),
+          label: t.label || `タイマー${i + 1}`,
+          durationSec: total,
+          notify: t.notify,
+        };
       })
       .filter(Boolean);
     if (parsed.length === 0) {
@@ -168,6 +174,7 @@ export default function CreateScreen({ route, navigation }: any) {
           id: t.id || uuidv4(),
           label: t.label || `タイマー${i + 1}`,
           durationSec: total,
+          notify: t.notify,
         };
       })
       .filter(Boolean);
@@ -210,6 +217,10 @@ export default function CreateScreen({ route, navigation }: any) {
               style={[styles.timerInput, { marginLeft: 4 }]}
             />
           </View>
+          <View style={styles.notifyRow}>
+            <Text style={styles.notifyLabel}>通知する</Text>
+            <Switch value={t.notify} onValueChange={v => updateTimer(idx, 'notify', v)} />
+          </View>
         </View>
       ))}
       <Pressable onPress={addTimerRow} style={styles.addIcon}>
@@ -230,7 +241,10 @@ export default function CreateScreen({ route, navigation }: any) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 64 }}
+      >
       {stage === 'choose' && (
         <View style={{ gap: 12 }}>
           <IconButton
@@ -282,7 +296,7 @@ export default function CreateScreen({ route, navigation }: any) {
             label="次へ"
             icon="arrow-forward-circle-outline"
             onPress={startNewTimers}
-            style={{ marginTop: 20 }}
+            style={{ marginTop: 20, marginBottom: 40 }}
           />
         </View>
       )}
@@ -306,7 +320,7 @@ export default function CreateScreen({ route, navigation }: any) {
             label="セットを保存"
             icon="save-outline"
             onPress={saveNew}
-            style={{ marginTop: 20 }}
+            style={{ marginTop: 20, marginBottom: 40 }}
           />
         </View>
       )}
@@ -319,7 +333,7 @@ export default function CreateScreen({ route, navigation }: any) {
             label="保存"
             icon="save-outline"
             onPress={saveExisting}
-            style={{ marginTop: 20 }}
+            style={{ marginTop: 20, marginBottom: 40 }}
           />
         </View>
       )}
