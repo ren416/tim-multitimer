@@ -23,13 +23,17 @@ export default function TimerListScreen({ navigation }: any) {
             onDelete={() => {
               Alert.alert(
                 '削除確認',
-                'このタイマーに関する記録も削除されますがよろしいですか？',
+                'このタイマーセットを削除しますか？',
                 [
                   { text: 'キャンセル', style: 'cancel' },
                   {
-                    text: '削除',
-                    style: 'destructive',
+                    text: 'セットのみ削除',
                     onPress: () => dispatch({ type: 'DELETE_SET', payload: { id: item.id } }),
+                  },
+                  {
+                    text: 'データも削除',
+                    style: 'destructive',
+                    onPress: () => dispatch({ type: 'DELETE_SET_WITH_DATA', payload: { id: item.id } }),
                   },
                 ],
               );

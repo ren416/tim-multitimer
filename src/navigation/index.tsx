@@ -5,6 +5,7 @@ import TimerListScreen from '../screens/TimerListScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import CreateScreen from '../screens/CreateScreen';
+import DataManagementScreen from '../screens/DataManagementScreen';
 import { Colors } from '../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -39,6 +40,11 @@ export default function RootTabs() {
       <Tab.Screen name="タイマー一覧" component={TimerListScreen} />
       <Tab.Screen name="記録" component={HistoryScreen} />
       <Tab.Screen name="設定" component={SettingsScreen} />
+      <Tab.Screen
+        name="データ管理"
+        component={DataManagementScreen}
+        options={{ tabBarButton: () => null, tabBarStyle: { display: 'none' } }}
+      />
     </Tab.Navigator>
   );
 }

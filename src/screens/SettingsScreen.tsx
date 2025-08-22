@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Switch } from 'react-native';
+import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }: any) {
   const { state, dispatch } = useTimerState();
 
   return (
@@ -17,6 +17,9 @@ export default function SettingsScreen() {
         <Text style={styles.label}>画面をスリープさせない</Text>
         <Switch value={state.settings.keepAwake} onValueChange={(v)=>dispatch({type:'UPDATE_SETTINGS', payload:{ keepAwake: v }})} />
       </View>
+      <Pressable style={styles.row} onPress={() => navigation.navigate('データ管理')}>
+        <Text style={styles.label}>データ管理</Text>
+      </Pressable>
     </View>
   );
 }

@@ -37,12 +37,24 @@ export default function HistoryScreen() {
   const { width } = useWindowDimensions();
   const now = dayjs();
   const [range, setRange] = useState<Range>('週');
+  const [usageRange, setUsageRange] = useState<Range>('週');
   const [year, setYear] = useState(now.year());
   const [month, setMonth] = useState(now.month() + 1);
   const [showPicker, setShowPicker] = useState(false);
 
+  const visibleHistory = useMemo(
+    () =>
+      state.history.filter(
+        h =>
+          h.completedAt &&
+          !h.cancelled &&
+          (!h.timerSetId || !state.hiddenTimerSetIds.includes(h.timerSetId)),
+      ),
+    [state.history, state.hiddenTimerSetIds],
+  );
+
   const stats = useMemo(() => {
-    const entries = state.history.filter(h => h.completedAt && !h.cancelled);
+    const entries = visibleHistory;
     const totalSec = entries.reduce((s, h) => s + h.totalDurationSec, 0);
     const sessions = entries.length;
     const avgMin = sessions ? totalSec / sessions / 60 : 0;
@@ -54,10 +66,10 @@ export default function HistoryScreen() {
       d = d.subtract(1, 'day');
     }
     return { totalSec, sessions, avgMin, streak };
-  }, [state.history]);
+  }, [visibleHistory]);
 
   const chartInfo = useMemo(() => {
-    const history = state.history.filter(h => h.completedAt && !h.cancelled);
+    const history = visibleHistory;
     const buckets: Record<string, number> = {};
     history.forEach(h => {
       const d = dayjs(h.completedAt!);
@@ -78,7 +90,7 @@ export default function HistoryScreen() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([x, sec]) => ({ x, sec }));
     return { data };
-  }, [state.history, range, year, month]);
+  }, [visibleHistory, range, year, month]);
 
   const maxSec = chartInfo.data.reduce((m, d) => Math.max(m, d.sec), 0);
   let unitDiv = 1;
@@ -118,9 +130,9 @@ export default function HistoryScreen() {
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
 
   const usageInfo = useMemo(() => {
-    const entries = state.history.filter(h => h.completedAt && !h.cancelled).filter(h => {
+    const entries = visibleHistory.filter(h => {
       const d = dayjs(h.completedAt!);
-      if (range === '日') {
+      if (usageRange === '日') {
         return d.year() === year && d.month() + 1 === month;
       } else {
         const start = d.startOf('week');
@@ -137,7 +149,7 @@ export default function HistoryScreen() {
       .sort((a, b) => b.y - a.y);
     const colors = data.map((_, i) => lighten('#00BFFF', i / (data.length + 1)));
     return { data, colors };
-  }, [state.history, state.timerSets, range, year, month]);
+  }, [visibleHistory, state.timerSets, usageRange, year, month]);
 
 
   useEffect(() => {
@@ -271,6 +283,17 @@ export default function HistoryScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>タイマータイプ別使用状況</Text>
+        <View style={[styles.tabs, { marginTop: 12 }]}>
+          {(['日', '週'] as Range[]).map(r => (
+            <Pressable
+              key={r}
+              onPress={() => setUsageRange(r)}
+              style={[styles.tab, usageRange === r && styles.tabActive]}
+            >
+              <Text style={[styles.tabText, usageRange === r && styles.tabTextActive]}>{r}</Text>
+            </Pressable>
+          ))}
+        </View>
         {usageInfo.data.length === 0 ? (
           <Text style={{ color: Colors.subText, marginTop: 8 }}>データがありません。</Text>
         ) : (

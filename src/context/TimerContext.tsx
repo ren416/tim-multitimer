@@ -46,16 +46,20 @@ type State = {
   timerSets: TimerSet[];
   history: HistoryEntry[];
   settings: Settings;
+  hiddenTimerSetIds: string[];
 };
 
 type Action =
   | { type: 'ADD_SET'; payload: Omit<TimerSet,'id'|'createdAt'|'updatedAt'> }
   | { type: 'UPDATE_SET'; payload: TimerSet }
   | { type: 'DELETE_SET'; payload: { id: string } }
+  | { type: 'DELETE_SET_WITH_DATA'; payload: { id: string } }
+  | { type: 'DELETE_HISTORY_BY_SET'; payload: { id: string } }
   | { type: 'DUPLICATE_SET'; payload: { id: string } }
   | { type: 'LOG_START'; payload: { id?: string; timerSetId?: string } }
   | { type: 'LOG_COMPLETE'; payload: { id: string; cancelled?: boolean; totalDurationSec?: number; timersRun?: number } }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> }
+  | { type: 'SET_HIDDEN_SETS'; payload: { ids: string[] } }
   | { type: 'HYDRATE'; payload: Partial<State> };
 
 const initial: State = {
@@ -65,7 +69,8 @@ const initial: State = {
     theme: 'light',
     enableNotifications: true,
     keepAwake: true,
-  }
+  },
+  hiddenTimerSetIds: [],
 };
 
 const STORAGE_KEY = 'tim.state.v1';
@@ -89,6 +94,20 @@ const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         timerSets: state.timerSets.filter(s => s.id !== action.payload.id),
+        hiddenTimerSetIds: state.hiddenTimerSetIds.filter(id => id !== action.payload.id),
+      };
+    }
+    case 'DELETE_SET_WITH_DATA': {
+      return {
+        ...state,
+        timerSets: state.timerSets.filter(s => s.id !== action.payload.id),
+        history: state.history.filter(h => h.timerSetId !== action.payload.id),
+        hiddenTimerSetIds: state.hiddenTimerSetIds.filter(id => id !== action.payload.id),
+      };
+    }
+    case 'DELETE_HISTORY_BY_SET': {
+      return {
+        ...state,
         history: state.history.filter(h => h.timerSetId !== action.payload.id),
       };
     }
@@ -129,6 +148,9 @@ const reducer = (state: State, action: Action): State => {
     }
     case 'UPDATE_SETTINGS': {
       return { ...state, settings: { ...state.settings, ...action.payload } };
+    }
+    case 'SET_HIDDEN_SETS': {
+      return { ...state, hiddenTimerSetIds: action.payload.ids };
     }
     case 'HYDRATE': {
       return { ...state, ...action.payload };
