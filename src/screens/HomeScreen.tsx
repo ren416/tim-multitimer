@@ -359,7 +359,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>タイマーセット選択</Text>
           <Pressable style={styles.select} onPress={handleSelectPress}>
@@ -370,7 +370,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
+        <View style={[styles.card, styles.timerCard]}>
           {selectedSet ? (
             <>
               <Text style={styles.infoText}>{`タイマーセット名：${selectedSet.name}`}</Text>
@@ -514,6 +514,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  content: { flexGrow: 1, padding: 16 },
   card: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -541,7 +542,7 @@ const styles = StyleSheet.create({
   infoText: { marginTop: 8, color: Colors.text },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
-  displayPager: { alignItems: 'center' },
+  displayPager: { alignItems: 'center', flex: 1 },
   pageControl: { flexDirection: 'row', gap: 6, marginTop: 8 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
   activeDot: { backgroundColor: Colors.primary },
@@ -609,4 +610,5 @@ const styles = StyleSheet.create({
   modalTimerText: { color: Colors.subText, fontSize: 12 },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
   hiddenInput: { height: 0, width: 0 },
+  timerCard: { marginTop: 20, alignItems: 'center', flex: 1 },
 });
