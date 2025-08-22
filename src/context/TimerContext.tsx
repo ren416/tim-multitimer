@@ -28,6 +28,7 @@ export type TimerSet = {
 export type HistoryEntry = {
   id: string;
   timerSetId?: string;
+  timerSetName?: string;
   timersRun: number;
   totalDurationSec: number;
   startedAt: string;
@@ -125,9 +126,11 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, timerSets: [dup, ...state.timerSets] };
     }
     case 'LOG_START': {
+      const set = state.timerSets.find(s => s.id === action.payload.timerSetId);
       const entry: HistoryEntry = {
         id: action.payload.id ?? uuidv4(),
         timerSetId: action.payload.timerSetId,
+        timerSetName: set?.name,
         timersRun: 0,
         totalDurationSec: 0,
         startedAt: dayjs().toISOString(),

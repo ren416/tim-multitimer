@@ -141,7 +141,8 @@ export default function HistoryScreen() {
     });
     const totals: Record<string, number> = {};
     entries.forEach(h => {
-      const name = state.timerSets.find(s => s.id === h.timerSetId)?.name ?? 'その他';
+      const existing = state.timerSets.find(s => s.id === h.timerSetId)?.name;
+      const name = existing ?? (h.timerSetName ? `*${h.timerSetName}` : '*不明なタイマーセット');
       totals[name] = (totals[name] ?? 0) + h.totalDurationSec;
     });
     const data = Object.entries(totals)
@@ -317,6 +318,9 @@ export default function HistoryScreen() {
           </>
         )}
       </View>
+      {usageInfo.data.some(d => d.x.startsWith('*')) && (
+        <Text style={styles.note}>*: このタイマーセットは現在削除されています。「設定」より確認できます。</Text>
+      )}
       {showPicker && (
         <Modal transparent animationType="slide" visible={showPicker} onRequestClose={() => setShowPicker(false)}>
           <View style={styles.modalOverlay}>
@@ -406,4 +410,5 @@ const styles = StyleSheet.create({
   picker: { flex: 1 },
   pickerDoneBtn: { marginTop: 16, alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 8, backgroundColor: Colors.primary, borderRadius: 8 },
   pickerDoneText: { fontWeight: '700', color: '#0B1D2A' },
+  note: { color: Colors.subText, fontSize: 12, marginTop: 8 },
 });
