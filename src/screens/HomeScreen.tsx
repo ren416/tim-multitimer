@@ -50,6 +50,13 @@ export default function HomeScreen() {
     [selectedId, state.timerSets]
   );
 
+  // Ensure a timer set is selected once data is loaded
+  useEffect(() => {
+    if (!selectedId && state.timerSets.length > 0) {
+      setSelectedId(state.timerSets[0].id);
+    }
+  }, [selectedId, state.timerSets]);
+
   const modes: Array<'simple' | 'bar' | 'circle'> = ['simple', 'bar', 'circle'];
   const scrollRef = useRef<ScrollView>(null);
   const handlePageScroll = (e: any) => {
