@@ -71,13 +71,13 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     soundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
 
-  const scheduleEndNotification = async (sec: number) => {
+  const scheduleEndNotification = async (sec: number, timer?: Timer) => {
     try {
       await Notifications.requestPermissionsAsync();
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'タイマー終了',
-          body: `${current?.label ?? 'タイマー'} が終了しました`,
+          body: `${timer?.label ?? 'タイマー'} が終了しました`,
           sound: true,
         },
         trigger: {
@@ -91,8 +91,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   };
 
   const start = () => {
-    if (!current) return;
-    const duration = getDuration(current);
+    const curr = timerSet.timers[indexRef.current];
+    if (!curr) return;
+    const duration = getDuration(curr);
     setRemaining(duration);
     setRunning(true);
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -109,9 +110,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     if (
       state.settings.enableNotifications &&
       timerSet.notifications?.enabled &&
-      current?.notify !== false
+      curr?.notify !== false
     ) {
-      scheduleEndNotification(duration);
+      scheduleEndNotification(duration, curr);
     }
   };
 
@@ -146,7 +147,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       indexRef.current = next;
       setRemaining(getDuration(timerSet.timers[next]));
       // auto start next without flashing button
-      setTimeout(() => startRef.current(), 0);
+      startRef.current();
     } else {
       setRunning(false);
       onFinish?.();
