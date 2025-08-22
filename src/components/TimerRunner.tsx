@@ -119,9 +119,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       setIndex(next);
       indexRef.current = next;
       setRemaining(timerSet.timers[next].durationSec);
-      setRunning(false);
-      // auto start next
-      setTimeout(() => startRef.current(), 500);
+      // auto start next without flashing button
+      setTimeout(() => startRef.current(), 0);
     } else {
       setRunning(false);
       onFinish?.();

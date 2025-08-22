@@ -255,7 +255,7 @@ export default function HomeScreen() {
     setInputVisible(false);
   };
 
-  const start = () => {
+  const start = (init?: number) => {
     if (selectedSet && !historyId) {
       const id = uuidv4();
       dispatch({ type: 'LOG_START', payload: { id, timerSetId: selectedSet.id } });
@@ -263,8 +263,11 @@ export default function HomeScreen() {
       setRunCount(0);
       setTotalSec(0);
     }
+    const rem = init ?? remaining;
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (remaining <= 0) return;
+    if (rem <= 0) return;
+    elapsedRef.current = elapsed;
+    lastUpdateRef.current = Date.now();
     setRunning(true);
     intervalRef.current = setInterval(() => {
       setRemaining(r => {
@@ -327,12 +330,13 @@ export default function HomeScreen() {
     setTotalSec(newTotal);
     if (currentIdx + 1 < selectedSet.timers.length) {
       const nextIdx = currentIdx + 1;
+      const nextDur = selectedSet.timers[nextIdx].durationSec;
       setIndex(nextIdx);
       indexRef.current = nextIdx;
-      setRemaining(selectedSet.timers[nextIdx].durationSec);
-      setRunning(false);
-      // auto start next timer
-      setTimeout(() => startRef.current(), 500);
+      setRemaining(nextDur);
+      elapsedRef.current = elapsed;
+      lastUpdateRef.current = Date.now();
+      startRef.current(nextDur);
     } else {
       setRunning(false);
       if (historyId) {
@@ -543,7 +547,7 @@ const styles = StyleSheet.create({
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
   displayPager: { alignItems: 'center', flex: 1 },
-  pageControl: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  pageControl: { flexDirection: 'row', gap: 6, marginTop: 4 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
   activeDot: { backgroundColor: Colors.primary },
   displayFrame: {
