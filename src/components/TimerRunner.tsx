@@ -14,7 +14,7 @@ type Props = {
 };
 
 export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
-  const { dispatch } = useTimerState();
+  const { state, dispatch } = useTimerState();
   const [index, setIndex] = useState(0);
   const indexRef = useRef(0);
   const [remaining, setRemaining] = useState(timerSet.timers[0]?.durationSec ?? 0);
@@ -47,6 +47,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const loadSound = async () => {
     try {
       const { sound } = await Audio.Sound.createAsync(require('../../assets/sounds/beep.wav'));
+      await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
       soundRef.current = sound;
     } catch(e) {
       console.warn('Failed to load sound', e);
@@ -61,6 +62,10 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     loadSound();
   }, []);
 
+  useEffect(() => {
+    soundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
+  }, [state.settings.notificationVolume]);
+
   const scheduleEndNotification = async (sec: number) => {
     try {
       await Notifications.requestPermissionsAsync();
@@ -68,6 +73,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
         content: {
           title: 'タイマー終了',
           body: `${current?.label ?? 'タイマー'} が終了しました`,
+          sound: true,
         },
         trigger: {
           seconds: sec,
@@ -93,7 +99,13 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
         return r - 1;
       });
     }, 1000);
-    scheduleEndNotification(remaining);
+    if (
+      state.settings.enableNotifications &&
+      timerSet.notifications?.enabled &&
+      current?.notify !== false
+    ) {
+      scheduleEndNotification(remaining);
+    }
   };
 
   const pause = () => {
@@ -112,8 +124,15 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   });
 
   const endOne = async () => {
-    try { await soundRef.current?.replayAsync(); } catch {}
     const currentIdx = indexRef.current;
+    const curr = timerSet.timers[currentIdx];
+    if (
+      state.settings.enableNotifications &&
+      timerSet.notifications?.enabled &&
+      curr?.notify !== false
+    ) {
+      try { await soundRef.current?.replayAsync(); } catch {}
+    }
     if (currentIdx + 1 < totalCount) {
       const next = currentIdx + 1;
       setIndex(next);
