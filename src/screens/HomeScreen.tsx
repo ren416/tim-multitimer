@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { Colors } from '../constants/colors';
-import { useTimerState } from '../context/TimerContext';
+import { useTimerState, Timer } from '../context/TimerContext';
 import { formatHMS } from '../utils/format';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
@@ -18,11 +18,15 @@ import Svg, { Circle, G } from 'react-native-svg';
 
 export default function HomeScreen() {
   const { state, dispatch } = useTimerState();
+  const getDuration = (t?: Timer) => {
+    const d = Number(t?.durationSec);
+    return Number.isFinite(d) ? Math.max(0, d) : 0;
+  };
   const [selectedId, setSelectedId] = useState(state.timerSets[0]?.id ?? '');
   const [index, setIndex] = useState(0);
   const indexRef = useRef(0);
   const [remaining, setRemaining] = useState<number>(
-    state.timerSets[0]?.timers[0]?.durationSec ?? 0
+    getDuration(state.timerSets[0]?.timers[0])
   );
   const [running, setRunning] = useState(false);
   const [selectVisible, setSelectVisible] = useState(false);
@@ -64,7 +68,7 @@ export default function HomeScreen() {
 
   const totalDuration = useMemo(() => {
     if (selectedSet) {
-      return selectedSet.timers.reduce((sum, t) => sum + t.durationSec, 0);
+      return selectedSet.timers.reduce((sum, t) => sum + getDuration(t), 0);
     }
     return quickInitial;
   }, [selectedSet, quickInitial]);
@@ -73,8 +77,8 @@ export default function HomeScreen() {
     if (selectedSet) {
       const past = selectedSet.timers
         .slice(0, index)
-        .reduce((sum, t) => sum + t.durationSec, 0);
-      const current = selectedSet.timers[index]?.durationSec ?? 0;
+                .reduce((sum, t) => sum + getDuration(t), 0);
+      const current = getDuration(selectedSet.timers[index]);
       return past + (current - remaining);
     }
     return quickInitial - remaining;
@@ -83,10 +87,11 @@ export default function HomeScreen() {
 
   const markers = useMemo(() => {
     if (!selectedSet) return [] as number[];
-    const total = selectedSet.timers.reduce((sum, t) => sum + t.durationSec, 0);
+    const total = selectedSet.timers.reduce((sum, t) => sum + getDuration(t), 0);
+    if (total <= 0) return [] as number[];
     let cum = 0;
     return selectedSet.timers.map(t => {
-      cum += t.durationSec;
+      cum += getDuration(t);
       return cum / total;
     });
   }, [selectedSet]);
@@ -188,7 +193,7 @@ export default function HomeScreen() {
   useEffect(() => {
     // reset when switching sets
     setIndex(0);
-    setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
+    setRemaining(getDuration(selectedSet?.timers[0]));
     setRunning(false);
     setQuickDigits('');
     setQuickInitial(0);
@@ -250,8 +255,9 @@ export default function HomeScreen() {
     const m = parseInt(digits.slice(0, -2) || '0', 10);
     const s = parseInt(digits.slice(-2) || '0', 10);
     const sec = m * 60 + s;
-    setRemaining(sec);
-    setQuickInitial(sec);
+    const safe = Math.max(0, sec);
+    setRemaining(safe);
+    setQuickInitial(safe);
     setQuickDigits('');
     setInputVisible(false);
   };
@@ -264,7 +270,7 @@ export default function HomeScreen() {
       setRunCount(0);
       setTotalSec(0);
     }
-    const rem = init ?? remaining;
+    const rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (rem <= 0) return;
     elapsedRef.current = elapsed;
@@ -317,7 +323,7 @@ export default function HomeScreen() {
     }
     if (selectedSet) {
       setIndex(0);
-      setRemaining(selectedSet?.timers[0]?.durationSec ?? 0);
+      setRemaining(getDuration(selectedSet?.timers[0]));
     } else {
       setRemaining(0);
       setQuickDigits('');
@@ -328,14 +334,14 @@ export default function HomeScreen() {
   const endOne = () => {
     if (!selectedSet) return;
     const currentIdx = indexRef.current;
-    const duration = selectedSet.timers[currentIdx].durationSec;
+    const duration = getDuration(selectedSet.timers[currentIdx]);
     const newRun = runCount + 1;
     const newTotal = totalSec + duration;
     setRunCount(newRun);
     setTotalSec(newTotal);
     if (currentIdx + 1 < selectedSet.timers.length) {
       const nextIdx = currentIdx + 1;
-      const nextDur = selectedSet.timers[nextIdx].durationSec;
+      const nextDur = getDuration(selectedSet.timers[nextIdx]);
       setIndex(nextIdx);
       indexRef.current = nextIdx;
       setRemaining(nextDur);
@@ -464,7 +470,7 @@ export default function HomeScreen() {
                     <View style={styles.modalTimers}>
                       {s.timers.map(t => (
                         <Text key={t.id} style={styles.modalTimerText}>
-                          {t.label} ({formatHMS(t.durationSec)})
+                          {t.label} ({formatHMS(getDuration(t))})
                         </Text>
                       ))}
                     </View>
