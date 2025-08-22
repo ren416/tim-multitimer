@@ -7,8 +7,10 @@ import {
   Pressable,
   Alert,
   Switch,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
@@ -236,11 +238,18 @@ export default function CreateScreen({ route, navigation }: any) {
   }, [route?.params?.editId]);
 
   return (
-      <KeyboardAwareScrollView
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 64 }}
-        extraScrollHeight={20}
-        enableOnAndroid
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 16,
+          paddingBottom: 64,
+        }}
+        keyboardShouldPersistTaps="handled"
       >
       {stage === 'choose' && (
         <View style={{ gap: 12 }}>
@@ -341,7 +350,8 @@ export default function CreateScreen({ route, navigation }: any) {
           />
         </View>
       )}
-      </KeyboardAwareScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
