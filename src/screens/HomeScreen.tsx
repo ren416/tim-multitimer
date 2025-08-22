@@ -547,7 +547,12 @@ const styles = StyleSheet.create({
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
   displayPager: { alignItems: 'center', flex: 1 },
-  pageControl: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  pageControl: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 16,
+  },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
   activeDot: { backgroundColor: Colors.primary },
   displayFrame: {
