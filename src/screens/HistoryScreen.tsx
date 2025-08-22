@@ -163,7 +163,7 @@ export default function HistoryScreen() {
   }, [stats.streak]);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 24 }}>
       <Pressable onPress={() => setShowPicker(true)} style={styles.ymSelector}>
         <Text style={styles.currentYM}>{`${year}年${month}月`}</Text>
         <View style={styles.ymArrows}>

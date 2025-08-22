@@ -40,7 +40,6 @@ export type HistoryEntry = {
 export type Settings = {
   theme: 'light'|'dark'|'system';
   primaryColor?: string;
-  keepAwake?: boolean;
   enableNotifications: boolean;
   notificationVolume: number;
 };
@@ -71,7 +70,6 @@ const initial: State = {
   settings: {
     theme: 'light',
     enableNotifications: true,
-    keepAwake: true,
     notificationVolume: 1,
   },
   hiddenTimerSetIds: [],
@@ -91,7 +89,10 @@ const reducer = (state: State, action: Action): State => {
       updated.updatedAt = dayjs().toISOString();
       return {
         ...state,
-        timerSets: state.timerSets.map(s => s.id === updated.id ? updated : s)
+        timerSets: state.timerSets.map(s => s.id === updated.id ? updated : s),
+        history: state.history.map(h =>
+          h.timerSetId === updated.id ? { ...h, timerSetName: updated.name } : h,
+        ),
       };
     }
     case 'DELETE_SET': {

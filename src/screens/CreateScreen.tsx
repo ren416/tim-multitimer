@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ScrollView,
   View,
   Text,
   StyleSheet,
@@ -8,9 +7,8 @@ import {
   Pressable,
   Alert,
   Switch,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
@@ -102,6 +100,7 @@ export default function CreateScreen({ route, navigation }: any) {
     const set = state.timerSets.find(s => s.id === id);
     if (!set) return;
     setSelectedId(id);
+    setSetName(set.name);
     setTimers(
       set.timers.map(t => ({
         id: t.id,
@@ -182,9 +181,9 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('更新できません', 'タイマーを入力してください。');
       return;
     }
-    const updated = { ...target, timers: parsed as any };
+    const updated = { ...target, name: setName, timers: parsed as any };
     dispatch({ type: 'UPDATE_SET', payload: updated });
-    Alert.alert('更新しました', `${target.name} を更新しました。`);
+    Alert.alert('更新しました', `${setName} を更新しました。`);
     reset();
     navigation.goBack();
   };
@@ -237,13 +236,11 @@ export default function CreateScreen({ route, navigation }: any) {
   }, [route?.params?.editId]);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.container}
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 64 }}
+        extraScrollHeight={20}
+        enableOnAndroid
       >
       {stage === 'choose' && (
         <View style={{ gap: 12 }}>
@@ -327,7 +324,14 @@ export default function CreateScreen({ route, navigation }: any) {
 
       {stage === 'existingTimers' && (
         <View>
-          <Text style={styles.title}>タイマーを設定</Text>
+          <Text style={styles.title}>セット名</Text>
+          <TextInput
+            value={setName}
+            onChangeText={setSetName}
+            placeholder="セット名"
+            style={styles.input}
+          />
+          <Text style={[styles.title, { marginTop: 20 }]}>タイマーを設定</Text>
           {renderTimerRows()}
           <IconButton
             label="保存"
@@ -337,8 +341,7 @@ export default function CreateScreen({ route, navigation }: any) {
           />
         </View>
       )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
   );
 }
 

@@ -30,6 +30,7 @@ export default function HomeScreen() {
   const [quickDigits, setQuickDigits] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const endTimeRef = useRef<number | null>(null);
   const [historyId, setHistoryId] = useState<string | null>(null);
   const [runCount, setRunCount] = useState(0);
   const [totalSec, setTotalSec] = useState(0);
@@ -268,16 +269,18 @@ export default function HomeScreen() {
     if (rem <= 0) return;
     elapsedRef.current = elapsed;
     lastUpdateRef.current = Date.now();
+    endTimeRef.current = Date.now() + rem * 1000;
     setRunning(true);
     intervalRef.current = setInterval(() => {
-      setRemaining(r => {
-        if (r <= 1) {
-          clearInterval(intervalRef.current!);
-          intervalRef.current = null;
-          return 0;
-        }
-        return r - 1;
-      });
+      if (endTimeRef.current == null) return;
+      const left = Math.ceil((endTimeRef.current - Date.now()) / 1000);
+      if (left <= 0) {
+        clearInterval(intervalRef.current!);
+        intervalRef.current = null;
+        setRemaining(0);
+      } else {
+        setRemaining(left);
+      }
     }, 1000);
   };
 
@@ -291,11 +294,13 @@ export default function HomeScreen() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    endTimeRef.current = null;
     setRunning(false);
   };
 
   const reset = () => {
     stop();
+    endTimeRef.current = null;
     if (historyId) {
       dispatch({
         type: 'LOG_COMPLETE',
