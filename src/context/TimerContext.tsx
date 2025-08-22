@@ -92,17 +92,34 @@ const reducer = (state: State, action: Action): State => {
       };
     }
     case 'DELETE_SET': {
+      const removed = state.timerSets.find(s => s.id === action.payload.id);
+      const history = removed
+        ? state.history.map(h =>
+            h.timerSetId === removed.id && !h.timerSetName
+              ? { ...h, timerSetName: removed.name }
+              : h,
+          )
+        : state.history;
       return {
         ...state,
         timerSets: state.timerSets.filter(s => s.id !== action.payload.id),
         hiddenTimerSetIds: state.hiddenTimerSetIds.filter(id => id !== action.payload.id),
+        history,
       };
     }
     case 'DELETE_SET_WITH_DATA': {
+      const removed = state.timerSets.find(s => s.id === action.payload.id);
+      const history = removed
+        ? state.history.map(h =>
+            h.timerSetId === removed.id && !h.timerSetName
+              ? { ...h, timerSetName: removed.name }
+              : h,
+          )
+        : state.history;
       return {
         ...state,
         timerSets: state.timerSets.filter(s => s.id !== action.payload.id),
-        history: state.history.filter(h => h.timerSetId !== action.payload.id),
+        history: history.filter(h => h.timerSetId !== action.payload.id),
         hiddenTimerSetIds: state.hiddenTimerSetIds.filter(id => id !== action.payload.id),
       };
     }
