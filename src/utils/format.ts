@@ -1,7 +1,10 @@
-export const pad2 = (n: number) => n.toString().padStart(2, '0');
+export const pad2 = (n: number) => {
+  const safe = Number.isFinite(n) ? n : 0;
+  return safe.toString().padStart(2, '0');
+};
 
 export const formatHMS = (sec: number) => {
-  const s = Math.max(0, Math.floor(sec));
+  const s = Number.isFinite(sec) ? Math.max(0, Math.floor(sec)) : 0;
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const r = s % 60;
