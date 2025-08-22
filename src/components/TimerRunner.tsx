@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { TimerSet } from '../context/TimerContext';
+import { Timer, TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
 import { formatHMS } from '../utils/format';
 import * as Notifications from 'expo-notifications';
@@ -17,7 +17,12 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const { state, dispatch } = useTimerState();
   const [index, setIndex] = useState(0);
   const indexRef = useRef(0);
-  const [remaining, setRemaining] = useState(timerSet.timers[0]?.durationSec ?? 0);
+  const getDuration = (t?: Timer) => {
+    const d = Number(t?.durationSec);
+    return Number.isFinite(d) ? Math.max(0, d) : 0;
+  };
+
+  const [remaining, setRemaining] = useState(() => getDuration(timerSet.timers[0]));
   const [running, setRunning] = useState(false);
   const [startedHistoryId, setStartedHistoryId] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -87,6 +92,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const start = () => {
     if (!current) return;
+    const duration = getDuration(current);
+    setRemaining(duration);
     setRunning(true);
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
@@ -104,7 +111,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       timerSet.notifications?.enabled &&
       current?.notify !== false
     ) {
-      scheduleEndNotification(remaining);
+      scheduleEndNotification(duration);
     }
   };
 
@@ -115,7 +122,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const resetCurrent = () => {
     if (!current) return;
-    setRemaining(current.durationSec);
+    setRemaining(getDuration(current));
   };
 
   const startRef = useRef(start);
@@ -137,7 +144,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       const next = currentIdx + 1;
       setIndex(next);
       indexRef.current = next;
-      setRemaining(timerSet.timers[next].durationSec);
+      setRemaining(getDuration(timerSet.timers[next]));
       // auto start next without flashing button
       setTimeout(() => startRef.current(), 0);
     } else {
@@ -152,7 +159,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       const next = currentIdx + 1;
       setIndex(next);
       indexRef.current = next;
-      setRemaining(timerSet.timers[next].durationSec);
+      setRemaining(getDuration(timerSet.timers[next]));
     } else {
       onFinish?.();
     }
