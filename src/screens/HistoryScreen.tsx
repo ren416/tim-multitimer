@@ -118,7 +118,15 @@ export default function HistoryScreen() {
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
 
   const usageInfo = useMemo(() => {
-    const entries = state.history.filter(h => h.completedAt && !h.cancelled);
+    const entries = state.history.filter(h => h.completedAt && !h.cancelled).filter(h => {
+      const d = dayjs(h.completedAt!);
+      if (range === '日') {
+        return d.year() === year && d.month() + 1 === month;
+      } else {
+        const start = d.startOf('week');
+        return start.year() === year && start.month() + 1 === month;
+      }
+    });
     const totals: Record<string, number> = {};
     entries.forEach(h => {
       const name = state.timerSets.find(s => s.id === h.timerSetId)?.name ?? 'その他';
@@ -129,7 +137,7 @@ export default function HistoryScreen() {
       .sort((a, b) => b.y - a.y);
     const colors = data.map((_, i) => lighten('#00BFFF', i / (data.length + 1)));
     return { data, colors };
-  }, [state.history, state.timerSets]);
+  }, [state.history, state.timerSets, range, year, month]);
 
 
   useEffect(() => {

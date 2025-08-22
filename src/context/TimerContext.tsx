@@ -36,8 +36,6 @@ export type HistoryEntry = {
 };
 
 export type Settings = {
-  age?: number;
-  gender?: 'male'|'female'|'other'|'unspecified';
   theme: 'light'|'dark'|'system';
   primaryColor?: string;
   keepAwake?: boolean;
