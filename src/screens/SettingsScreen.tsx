@@ -20,21 +20,16 @@ export default function SettingsScreen({ navigation }: any) {
           />
         </View>
         <View style={{ marginTop: 12 }}>
-          <Text style={styles.label}>
-            通知音量 {Math.round((state.settings.notificationVolume ?? 0) * 100)}%
-          </Text>
+          <Text style={styles.label}>通知音量</Text>
           <Slider
-            style={styles.volumeSlider}
-            value={state.settings.notificationVolume ?? 0}
+            style={{ marginTop: 8 }}
+            value={state.settings.notificationVolume}
             onValueChange={v =>
-              dispatch({
-                type: 'UPDATE_SETTINGS',
-                payload: { notificationVolume: v },
-              })
+              dispatch({ type: 'UPDATE_SETTINGS', payload: { notificationVolume: v } })
             }
             minimumValue={0}
             maximumValue={1}
-            step={0.01}
+            step={0.1}
           />
         </View>
       </View>
@@ -54,5 +49,4 @@ const styles = StyleSheet.create({
   section: { backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 12, marginTop: 16 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   label: { color: Colors.text },
-  volumeSlider: { marginTop: 8 },
 });
