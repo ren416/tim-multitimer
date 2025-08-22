@@ -48,7 +48,7 @@ export default function DataManagementScreen() {
         ) : (
           deletedSets.map(s => (
             <View key={s.id} style={styles.row}>
-              <Text style={styles.label}>{`*${s.name}`}</Text>
+              <Text style={styles.label}>{`${s.name}`}</Text>
               <Pressable
                 style={styles.deleteBtn}
                 onPress={() =>
@@ -85,9 +85,6 @@ export default function DataManagementScreen() {
           ))
         )}
       </View>
-      {deletedSets.length > 0 && (
-        <Text style={styles.note}>*: このタイマーセットは現在削除されています。「設定」より確認できます。</Text>
-      )}
     </ScrollView>
   );
 }
