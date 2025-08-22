@@ -279,7 +279,11 @@ export default function HomeScreen() {
     }
     const rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (rem <= 0) return;
+    if (rem <= 0) {
+      setRemaining(0);
+      if (selectedSet) endOne();
+      return;
+    }
     elapsedRef.current = elapsed;
     lastUpdateRef.current = Date.now();
     endTimeRef.current = Date.now() + rem * 1000;
