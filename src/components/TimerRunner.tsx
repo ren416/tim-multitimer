@@ -28,6 +28,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const [startedHistoryId, setStartedHistoryId] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const notifySoundRef = useRef<Audio.Sound | null>(null);
 
   const totalCount = timerSet.timers.length;
   const current = timerSet.timers[index];
@@ -55,12 +56,19 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       const name = timerSet.sound || 'normal';
       if (name === 'none') {
         soundRef.current = null;
-        return;
+      } else {
+        const file = SOUND_FILES[name] || SOUND_FILES['normal'];
+        const { sound } = await Audio.Sound.createAsync(file, { shouldPlay: false });
+        await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
+        soundRef.current = sound;
       }
-      const file = SOUND_FILES[name] || SOUND_FILES['normal'];
-      const { sound } = await Audio.Sound.createAsync(file, { shouldPlay: false });
-      await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
-      soundRef.current = sound;
+      await notifySoundRef.current?.unloadAsync();
+      const { sound: nSound } = await Audio.Sound.createAsync(
+        SOUND_FILES['beep'],
+        { shouldPlay: false }
+      );
+      await nSound.setVolumeAsync(state.settings.notificationVolume ?? 1);
+      notifySoundRef.current = nSound;
     } catch(e) {
       console.warn('Failed to load sound', e);
     }
@@ -68,6 +76,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const unloadSound = async () => {
     try { await soundRef.current?.unloadAsync(); } catch {}
+    try { await notifySoundRef.current?.unloadAsync(); } catch {}
   };
 
   useEffect(() => {
@@ -79,6 +88,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   useEffect(() => {
     soundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
+    notifySoundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
 
   const scheduleEndNotification = async (sec: number, timer?: Timer) => {
@@ -107,6 +117,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     setRemaining(duration);
     setRunning(true);
     try { soundRef.current?.stopAsync(); } catch {}
+    try { notifySoundRef.current?.stopAsync(); } catch {}
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       setRemaining((r) => {
@@ -146,6 +157,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     const currentIdx = indexRef.current;
     const curr = timerSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= totalCount;
+    if (curr?.notify !== false) {
+      try { await notifySoundRef.current?.replayAsync(); } catch {}
+    }
     if (
       (
         state.settings.enableNotifications &&
@@ -184,6 +198,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
     try { soundRef.current?.stopAsync(); } catch {}
+    try { notifySoundRef.current?.stopAsync(); } catch {}
     onCancel?.();
   };
 

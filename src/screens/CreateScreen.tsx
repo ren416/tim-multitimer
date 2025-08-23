@@ -225,7 +225,7 @@ export default function CreateScreen({ route, navigation }: any) {
             />
           </View>
           <View style={styles.notifyRow}>
-            <Text style={styles.notifyLabel}>通知する</Text>
+            <Text style={styles.notifyLabel}>終了時音で知らせる</Text>
             <Switch value={t.notify} onValueChange={v => updateTimer(idx, 'notify', v)} />
           </View>
         </View>
