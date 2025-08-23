@@ -6,6 +6,7 @@ import { formatHMS } from '../utils/format';
 import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
+import { SOUND_FILES } from '../constants/sounds';
 
 type Props = {
   timerSet: TimerSet;
@@ -45,13 +46,13 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      unloadSound();
     };
   }, []);
 
   const loadSound = async () => {
     try {
-      const { sound } = await Audio.Sound.createAsync(require('../../assets/sounds/beep.wav'));
+      const file = SOUND_FILES[timerSet.sound || 'normal'] || SOUND_FILES['normal'];
+      const { sound } = await Audio.Sound.createAsync(file);
       await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
       soundRef.current = sound;
     } catch(e) {
@@ -65,7 +66,10 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   useEffect(() => {
     loadSound();
-  }, []);
+    return () => {
+      unloadSound();
+    };
+  }, [timerSet.sound]);
 
   useEffect(() => {
     soundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);

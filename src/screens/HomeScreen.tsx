@@ -15,6 +15,8 @@ import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
+import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
+import { Audio } from 'expo-av';
 
 export default function HomeScreen() {
   const { state, dispatch } = useTimerState();
@@ -32,6 +34,7 @@ export default function HomeScreen() {
   const [selectVisible, setSelectVisible] = useState(false);
   const [inputVisible, setInputVisible] = useState(false);
   const [quickDigits, setQuickDigits] = useState('');
+  const [quickSound, setQuickSound] = useState('normal');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endTimeRef = useRef<number | null>(null);
@@ -42,6 +45,9 @@ export default function HomeScreen() {
   const [modeIndex, setModeIndex] = useState(0);
   const [quickInitial, setQuickInitial] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [soundSelectVisible, setSoundSelectVisible] = useState(false);
+
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   const elapsedRef = useRef(0);
   const lastUpdateRef = useRef(Date.now());
@@ -109,6 +115,30 @@ export default function HomeScreen() {
     if (p > 1) return 1;
     return p;
   };
+
+  const loadSound = async (s: string) => {
+    try {
+      const file = SOUND_FILES[s] || SOUND_FILES['normal'];
+      await soundRef.current?.unloadAsync();
+      const { sound } = await Audio.Sound.createAsync(file);
+      await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
+      soundRef.current = sound;
+    } catch (e) {
+      console.warn('Failed to load sound', e);
+    }
+  };
+
+  useEffect(() => {
+    const name = selectedSet ? selectedSet.sound || 'normal' : quickSound;
+    loadSound(name);
+    return () => {
+      soundRef.current?.unloadAsync().catch(() => {});
+    };
+  }, [quickSound, selectedSet?.sound]);
+
+  useEffect(() => {
+    soundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
+  }, [state.settings.notificationVolume]);
 
   useEffect(() => {
     elapsedRef.current = elapsed;
@@ -351,7 +381,15 @@ export default function HomeScreen() {
   const endOne = () => {
     if (!selectedSet) return;
     const currentIdx = indexRef.current;
-    const duration = getDuration(selectedSet.timers[currentIdx]);
+    const currentTimer = selectedSet.timers[currentIdx];
+    if (
+      state.settings.enableNotifications &&
+      selectedSet.notifications?.enabled &&
+      currentTimer?.notify !== false
+    ) {
+      soundRef.current?.replayAsync().catch(() => {});
+    }
+    const duration = getDuration(currentTimer);
     const newRun = runCount + 1;
     const newTotal = totalSec + duration;
     setRunCount(newRun);
@@ -385,6 +423,7 @@ export default function HomeScreen() {
         endOne();
       } else {
         setRunning(false);
+        soundRef.current?.replayAsync().catch(() => {});
       }
     }
   }, [remaining, running, selectedSet]);
@@ -519,6 +558,10 @@ export default function HomeScreen() {
               style={styles.hiddenInput}
               autoFocus
             />
+            <Pressable style={styles.select} onPress={() => setSoundSelectVisible(true)}>
+              <Text style={styles.selectLabel}>終了音</Text>
+              <Text style={styles.selectValue}>{SOUND_OPTIONS.find(s => s.value === quickSound)?.label}</Text>
+            </Pressable>
             <View style={styles.row}>
               <IconButton
                 label="決定"
@@ -537,6 +580,32 @@ export default function HomeScreen() {
                 style={{ flex: 1 }}
               />
             </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={soundSelectVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              {SOUND_OPTIONS.map(o => (
+                <Pressable
+                  key={o.value}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setQuickSound(o.value);
+                    setSoundSelectVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{o.label}</Text>
+                </Pressable>
+              ))}
+              <Pressable
+                style={[styles.modalItem, { borderTopWidth: 1, borderTopColor: Colors.border }]}
+                onPress={() => setSoundSelectVisible(false)}
+              >
+                <Text style={[styles.modalItemText, { color: Colors.subText, textAlign: 'center' }]}>キャンセル</Text>
+              </Pressable>
+            </ScrollView>
           </View>
         </View>
       </Modal>

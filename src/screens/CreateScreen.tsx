@@ -10,12 +10,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
+import { SOUND_OPTIONS } from '../constants/sounds';
 
 type Stage =
   | 'choose'
@@ -36,6 +38,8 @@ export default function CreateScreen({ route, navigation }: any) {
   const [endTime, setEndTime] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [timers, setTimers] = useState<TimerInput[]>([]);
+  const [sound, setSound] = useState('normal');
+  const [soundModal, setSoundModal] = useState(false);
 
   const reset = () => {
     setStage('choose');
@@ -45,6 +49,7 @@ export default function CreateScreen({ route, navigation }: any) {
     setEndTime('');
     setSelectedId('');
     setTimers([]);
+    setSound('normal');
     navigation.setParams({ editId: undefined });
   };
 
@@ -103,6 +108,7 @@ export default function CreateScreen({ route, navigation }: any) {
     if (!set) return;
     setSelectedId(id);
     setSetName(set.name);
+    setSound(set.sound || 'normal');
     setTimers(
       set.timers.map(t => ({
         id: t.id,
@@ -153,7 +159,7 @@ export default function CreateScreen({ route, navigation }: any) {
         name: setName,
         description: '',
         timers: parsed as any,
-        sound: 'beep',
+        sound,
         notifications: notify ? { enabled: true, start: startTime, end: endTime } : { enabled: false },
       },
     });
@@ -183,7 +189,7 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('更新できません', 'タイマーを入力してください。');
       return;
     }
-    const updated = { ...target, name: setName, timers: parsed as any };
+    const updated = { ...target, name: setName, timers: parsed as any, sound };
     dispatch({ type: 'UPDATE_SET', payload: updated });
     Alert.alert('更新しました', `${setName} を更新しました。`);
     reset();
@@ -278,6 +284,10 @@ export default function CreateScreen({ route, navigation }: any) {
             placeholder="セット名"
             style={styles.input}
           />
+          <Pressable style={styles.select} onPress={() => setSoundModal(true)}>
+            <Text style={styles.notifyLabel}>終了音</Text>
+            <Text style={styles.selectValue}>{SOUND_OPTIONS.find(s => s.value === sound)?.label}</Text>
+          </Pressable>
           <View style={styles.notifyRow}>
             <Text style={styles.notifyLabel}>通知を有効にする</Text>
             <Switch value={notify} onValueChange={setNotify} />
@@ -340,6 +350,10 @@ export default function CreateScreen({ route, navigation }: any) {
             placeholder="セット名"
             style={styles.input}
           />
+          <Pressable style={styles.select} onPress={() => setSoundModal(true)}>
+            <Text style={styles.notifyLabel}>終了音</Text>
+            <Text style={styles.selectValue}>{SOUND_OPTIONS.find(s => s.value === sound)?.label}</Text>
+          </Pressable>
           <Text style={[styles.title, { marginTop: 20 }]}>タイマーを設定</Text>
           {renderTimerRows()}
           <IconButton
@@ -351,6 +365,32 @@ export default function CreateScreen({ route, navigation }: any) {
         </View>
       )}
       </ScrollView>
+      <Modal visible={soundModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              {SOUND_OPTIONS.map(o => (
+                <Pressable
+                  key={o.value}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setSound(o.value);
+                    setSoundModal(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{o.label}</Text>
+                </Pressable>
+              ))}
+              <Pressable
+                style={[styles.modalItem, { borderTopWidth: 1, borderTopColor: Colors.border }]}
+                onPress={() => setSoundModal(false)}
+              >
+                <Text style={[styles.modalItemText, { color: Colors.subText, textAlign: 'center' }]}>キャンセル</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -416,5 +456,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   addIcon: { alignItems: 'center', marginTop: 12 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    width: '80%',
+  },
+  modalItem: { paddingVertical: 12 },
+  modalItemText: { color: Colors.text, fontWeight: '700', textAlign: 'left' },
 });
 

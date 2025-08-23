@@ -207,7 +207,7 @@ export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children})
           const example: Omit<TimerSet,'id'|'createdAt'|'updatedAt'> = {
             name: 'ポモドーロ (25-5 x2)',
             description: '25分集中 + 5分休憩を2セット',
-            sound: 'beep',
+            sound: 'normal',
             timers: [
               { id: uuidv4(), label: '集中 1', durationSec: 25*60, notify: true },
               { id: uuidv4(), label: '休憩 1', durationSec: 5*60, notify: true },
