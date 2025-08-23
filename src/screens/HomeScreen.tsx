@@ -48,6 +48,7 @@ export default function HomeScreen() {
   const [soundSelectVisible, setSoundSelectVisible] = useState(false);
 
   const soundRef = useRef<Audio.Sound | null>(null);
+  const [soundPlaying, setSoundPlaying] = useState(false);
 
   const elapsedRef = useRef(0);
   const lastUpdateRef = useRef(Date.now());
@@ -118,10 +119,19 @@ export default function HomeScreen() {
 
   const loadSound = async (s: string) => {
     try {
-      const file = SOUND_FILES[s] || SOUND_FILES['normal'];
       await soundRef.current?.unloadAsync();
-      const { sound } = await Audio.Sound.createAsync(file);
+      setSoundPlaying(false);
+      if (s === 'none') {
+        soundRef.current = null;
+        return;
+      }
+      const file = SOUND_FILES[s] || SOUND_FILES['normal'];
+      const { sound } = await Audio.Sound.createAsync(file, { shouldPlay: false });
       await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (!status.isLoaded) return;
+        setSoundPlaying(status.isPlaying);
+      });
       soundRef.current = sound;
     } catch (e) {
       console.warn('Failed to load sound', e);
@@ -301,6 +311,8 @@ export default function HomeScreen() {
 
   const start = (init?: number) => {
     let rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
+    soundRef.current?.stopAsync().catch(() => {});
+    setSoundPlaying(false);
     if (selectedSet && !historyId) {
       const id = uuidv4();
       dispatch({ type: 'LOG_START', payload: { id, timerSetId: selectedSet.id } });
@@ -349,11 +361,12 @@ export default function HomeScreen() {
     }
     endTimeRef.current = null;
     setRunning(false);
+    soundRef.current?.stopAsync().catch(() => {});
+    setSoundPlaying(false);
   };
 
   const reset = () => {
     stop();
-    endTimeRef.current = null;
     if (historyId) {
       dispatch({
         type: 'LOG_COMPLETE',
@@ -382,10 +395,13 @@ export default function HomeScreen() {
     if (!selectedSet) return;
     const currentIdx = indexRef.current;
     const currentTimer = selectedSet.timers[currentIdx];
+    const isLast = currentIdx + 1 >= selectedSet.timers.length;
     if (
-      state.settings.enableNotifications &&
-      selectedSet.notifications?.enabled &&
-      currentTimer?.notify !== false
+      (
+        state.settings.enableNotifications &&
+        selectedSet.notifications?.enabled &&
+        currentTimer?.notify !== false
+      ) || isLast
     ) {
       soundRef.current?.replayAsync().catch(() => {});
     }
@@ -486,7 +502,7 @@ export default function HomeScreen() {
               label="停止"
               icon="pause"
               onPress={stop}
-              disabled={!running}
+              disabled={!running && !soundPlaying}
               type="secondary"
               style={{ flex: 1 }}
             />

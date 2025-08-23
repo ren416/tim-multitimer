@@ -51,8 +51,14 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const loadSound = async () => {
     try {
-      const file = SOUND_FILES[timerSet.sound || 'normal'] || SOUND_FILES['normal'];
-      const { sound } = await Audio.Sound.createAsync(file);
+      await soundRef.current?.unloadAsync();
+      const name = timerSet.sound || 'normal';
+      if (name === 'none') {
+        soundRef.current = null;
+        return;
+      }
+      const file = SOUND_FILES[name] || SOUND_FILES['normal'];
+      const { sound } = await Audio.Sound.createAsync(file, { shouldPlay: false });
       await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
       soundRef.current = sound;
     } catch(e) {
@@ -100,6 +106,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     const duration = getDuration(curr);
     setRemaining(duration);
     setRunning(true);
+    try { soundRef.current?.stopAsync(); } catch {}
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       setRemaining((r) => {
@@ -138,10 +145,13 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const endOne = async () => {
     const currentIdx = indexRef.current;
     const curr = timerSet.timers[currentIdx];
+    const isLast = currentIdx + 1 >= totalCount;
     if (
-      state.settings.enableNotifications &&
-      timerSet.notifications?.enabled &&
-      curr?.notify !== false
+      (
+        state.settings.enableNotifications &&
+        timerSet.notifications?.enabled &&
+        curr?.notify !== false
+      ) || isLast
     ) {
       try { await soundRef.current?.replayAsync(); } catch {}
     }
@@ -173,6 +183,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const cancel = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
+    try { soundRef.current?.stopAsync(); } catch {}
     onCancel?.();
   };
 

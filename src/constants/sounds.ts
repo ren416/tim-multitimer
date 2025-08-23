@@ -5,6 +5,7 @@ export type SoundOption = {
 };
 
 export const SOUND_OPTIONS: SoundOption[] = [
+  { value: 'none', label: 'なし', file: null },
   { value: 'normal', label: 'ノーマル', file: require('../../assets/sounds/normal.mp3') },
   { value: 'normal(high)', label: 'ノーマル（高）', file: require('../../assets/sounds/normal(high).mp3') },
   { value: 'simple', label: 'シンプル', file: require('../../assets/sounds/simple.mp3') },
