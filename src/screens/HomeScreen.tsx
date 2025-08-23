@@ -270,14 +270,20 @@ export default function HomeScreen() {
   };
 
   const start = (init?: number) => {
+    let rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     if (selectedSet && !historyId) {
       const id = uuidv4();
       dispatch({ type: 'LOG_START', payload: { id, timerSetId: selectedSet.id } });
       setHistoryId(id);
       setRunCount(0);
       setTotalSec(0);
+      // Ensure a new run always begins from the first timer
+      setIndex(0);
+      indexRef.current = 0;
+      const first = getDuration(selectedSet.timers[0]);
+      setRemaining(first);
+      rem = Number.isFinite(init ?? first) ? Math.max(0, init ?? first) : 0;
     }
-    const rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (rem <= 0) {
       setRemaining(0);
