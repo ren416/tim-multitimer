@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endTimeRef = useRef<number | null>(null);
+  const nextTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [historyId, setHistoryId] = useState<string | null>(null);
   const [runCount, setRunCount] = useState(0);
   const [totalSec, setTotalSec] = useState(0);
@@ -261,11 +262,16 @@ export default function HomeScreen() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    if (nextTimeoutRef.current) {
+      clearTimeout(nextTimeoutRef.current);
+      nextTimeoutRef.current = null;
+    }
   }, [selectedSet]);
 
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (nextTimeoutRef.current) clearTimeout(nextTimeoutRef.current);
       const { id, total, run } = historyRef.current;
       if (id) {
         dispatch({
@@ -320,6 +326,10 @@ export default function HomeScreen() {
   };
 
   const start = (init?: number) => {
+    if (nextTimeoutRef.current) {
+      clearTimeout(nextTimeoutRef.current);
+      nextTimeoutRef.current = null;
+    }
     let rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     soundRef.current?.stopAsync().catch(() => {});
     setSoundPlaying(false);
@@ -368,6 +378,10 @@ export default function HomeScreen() {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    if (nextTimeoutRef.current) {
+      clearTimeout(nextTimeoutRef.current);
+      nextTimeoutRef.current = null;
     }
     endTimeRef.current = null;
     setRunning(false);
@@ -443,7 +457,14 @@ export default function HomeScreen() {
         startRef.current(nextDur);
       };
       if (delay > 0) {
-        setTimeout(startNext, delay);
+        if (nextTimeoutRef.current) {
+          clearTimeout(nextTimeoutRef.current);
+          nextTimeoutRef.current = null;
+        }
+        nextTimeoutRef.current = setTimeout(() => {
+          nextTimeoutRef.current = null;
+          startNext();
+        }, delay);
       } else {
         startNext();
       }
