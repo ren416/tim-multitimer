@@ -7,6 +7,7 @@ import {
   Pressable,
   Modal,
   TextInput,
+  GestureResponderEvent,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState, Timer } from '../context/TimerContext';
@@ -330,7 +331,8 @@ export default function HomeScreen() {
     setInputVisible(false);
   };
 
-  const start = (init?: number) => {
+  const start = (initParam?: number | unknown) => {
+    const init = typeof initParam === 'number' ? initParam : undefined;
     if (nextTimeoutRef.current) {
       clearTimeout(nextTimeoutRef.current);
       nextTimeoutRef.current = null;
@@ -561,7 +563,7 @@ export default function HomeScreen() {
             <IconButton
               label="開始"
               icon="play"
-              onPress={start}
+              onPress={() => start()}
               disabled={running || (!selectedSet && remaining <= 0)}
               style={{ flex: 1 }}
             />
