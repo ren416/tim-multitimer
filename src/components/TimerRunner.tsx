@@ -157,7 +157,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     const currentIdx = indexRef.current;
     const curr = timerSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= totalCount;
-    if (curr?.notify !== false) {
+    if (curr?.notify !== false && !isLast) {
       try { await notifySoundRef.current?.replayAsync(); } catch {}
     }
     if (
