@@ -415,7 +415,9 @@ export default function HomeScreen() {
       try {
         await notifySoundRef.current?.replayAsync();
         const status = await notifySoundRef.current?.getStatusAsync();
-        delay = status?.durationMillis ?? 0;
+        if (status && status.isLoaded) {
+          delay = status.durationMillis ?? 0;
+        }
       } catch {}
     }
 
