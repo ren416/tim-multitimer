@@ -31,6 +31,7 @@ export default function HomeScreen() {
     getDuration(state.timerSets[0]?.timers[0])
   );
   const [running, setRunning] = useState(false);
+  const runningRef = useRef(running);
   const [selectVisible, setSelectVisible] = useState(false);
   const [inputVisible, setInputVisible] = useState(false);
   const [quickDigits, setQuickDigits] = useState('');
@@ -77,6 +78,10 @@ export default function HomeScreen() {
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
+
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
 
   useEffect(() => {
     historyRef.current = { id: historyId, total: totalSec, run: runCount };
@@ -418,6 +423,7 @@ export default function HomeScreen() {
 
   const endOne = async () => {
     if (!selectedSet) return;
+    const runId = historyRef.current.id;
     const currentIdx = indexRef.current;
     const currentTimer = selectedSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= selectedSet.timers.length;
@@ -435,6 +441,8 @@ export default function HomeScreen() {
       } catch {}
     }
 
+    if (historyRef.current.id !== runId || !runningRef.current) return;
+
     if (notificationsOn && (currentTimer?.notify !== false || isLast)) {
       soundRef.current?.replayAsync().catch(() => {});
     }
@@ -445,10 +453,13 @@ export default function HomeScreen() {
     setRunCount(newRun);
     setTotalSec(newTotal);
 
+    if (historyRef.current.id !== runId || !runningRef.current) return;
+
     if (currentIdx + 1 < selectedSet.timers.length) {
       const nextIdx = currentIdx + 1;
       const nextDur = getDuration(selectedSet.timers[nextIdx]);
       const startNext = () => {
+        if (historyRef.current.id !== runId || !runningRef.current) return;
         setIndex(nextIdx);
         indexRef.current = nextIdx;
         setRemaining(nextDur);
@@ -462,6 +473,7 @@ export default function HomeScreen() {
           nextTimeoutRef.current = null;
         }
         nextTimeoutRef.current = setTimeout(() => {
+          if (historyRef.current.id !== runId || !runningRef.current) return;
           nextTimeoutRef.current = null;
           startNext();
         }, delay);
@@ -470,7 +482,7 @@ export default function HomeScreen() {
       }
     } else {
       setRunning(false);
-      if (historyId) {
+      if (historyId && historyRef.current.id === runId) {
         dispatch({
           type: 'LOG_COMPLETE',
           payload: { id: historyId, totalDurationSec: newTotal, timersRun: newRun },
