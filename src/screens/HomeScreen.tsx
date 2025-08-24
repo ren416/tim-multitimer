@@ -25,7 +25,9 @@ export default function HomeScreen() {
     const d = Number(t?.durationSec);
     return Number.isFinite(d) ? Math.max(0, d) : 0;
   };
-  const [selectedId, setSelectedId] = useState(state.timerSets[0]?.id ?? '');
+  const [selectedId, setSelectedId] = useState<string | null>(
+    state.timerSets[0]?.id ?? null
+  );
   const [index, setIndex] = useState(0);
   const indexRef = useRef(0);
   const [remaining, setRemaining] = useState<number>(
@@ -63,7 +65,7 @@ export default function HomeScreen() {
 
   // Ensure a timer set is selected once data is loaded
   useEffect(() => {
-    if (!selectedId && state.timerSets.length > 0) {
+    if (selectedId === null && state.timerSets.length > 0) {
       setSelectedId(state.timerSets[0].id);
     }
   }, [selectedId, state.timerSets]);
