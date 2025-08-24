@@ -408,16 +408,14 @@ export default function HomeScreen() {
     const currentIdx = indexRef.current;
     const currentTimer = selectedSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= selectedSet.timers.length;
-    if (currentTimer?.notify !== false) {
+    const notificationsOn =
+      state.settings.enableNotifications && selectedSet.notifications?.enabled;
+
+    if (notificationsOn && currentTimer?.notify !== false && !isLast) {
       notifySoundRef.current?.replayAsync().catch(() => {});
     }
-    if (
-      (
-        state.settings.enableNotifications &&
-        selectedSet.notifications?.enabled &&
-        currentTimer?.notify !== false
-      ) || isLast
-    ) {
+
+    if (notificationsOn && (currentTimer?.notify !== false || isLast)) {
       soundRef.current?.replayAsync().catch(() => {});
     }
     const duration = getDuration(currentTimer);
