@@ -117,7 +117,6 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     setRemaining(duration);
     setRunning(true);
     try { soundRef.current?.stopAsync(); } catch {}
-    try { notifySoundRef.current?.stopAsync(); } catch {}
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       setRemaining((r) => {
@@ -157,16 +156,15 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     const currentIdx = indexRef.current;
     const curr = timerSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= totalCount;
-    if (curr?.notify !== false && !isLast) {
-      try { await notifySoundRef.current?.replayAsync(); } catch {}
-    }
-    if (
-      (
-        state.settings.enableNotifications &&
-        timerSet.notifications?.enabled &&
-        curr?.notify !== false
-      ) || isLast
-    ) {
+    const notificationsEnabled =
+      state.settings.enableNotifications && timerSet.notifications?.enabled;
+    if (curr?.notify !== false) {
+      if (!isLast) {
+        try { await notifySoundRef.current?.replayAsync(); } catch {}
+      } else if (notificationsEnabled) {
+        try { await soundRef.current?.replayAsync(); } catch {}
+      }
+    } else if (isLast && notificationsEnabled) {
       try { await soundRef.current?.replayAsync(); } catch {}
     }
     if (currentIdx + 1 < totalCount) {
