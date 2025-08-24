@@ -411,7 +411,7 @@ export default function HomeScreen() {
     const notificationsOn =
       state.settings.enableNotifications && selectedSet.notifications?.enabled;
 
-    if (notificationsOn && currentTimer?.notify !== false && !isLast) {
+    if (currentTimer?.notify !== false && !isLast) {
       notifySoundRef.current?.replayAsync().catch(() => {});
     }
 
