@@ -344,6 +344,7 @@ export default function HomeScreen() {
       setHistoryId(id);
       setRunCount(0);
       setTotalSec(0);
+      historyRef.current = { id, total: 0, run: 0 };
       // Ensure a new run always begins from the first timer
       setIndex(0);
       indexRef.current = 0;
@@ -354,7 +355,11 @@ export default function HomeScreen() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (rem <= 0) {
       setRemaining(0);
-      if (selectedSet) endOne();
+      if (selectedSet) {
+        runningRef.current = true;
+        endOne();
+        runningRef.current = false;
+      }
       return;
     }
     elapsedRef.current = elapsed;
