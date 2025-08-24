@@ -356,9 +356,10 @@ export default function HomeScreen() {
     if (rem <= 0) {
       setRemaining(0);
       if (selectedSet) {
+        // Keep the run state active so that delayed transitions (e.g. when
+        // playing a notification sound) can still advance to the next timer.
         runningRef.current = true;
         endOne();
-        runningRef.current = false;
       }
       return;
     }
