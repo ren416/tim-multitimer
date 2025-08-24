@@ -48,6 +48,7 @@ export default function HomeScreen() {
   const [soundSelectVisible, setSoundSelectVisible] = useState(false);
 
   const soundRef = useRef<Audio.Sound | null>(null);
+  const notifySoundRef = useRef<Audio.Sound | null>(null);
   const [soundPlaying, setSoundPlaying] = useState(false);
 
   const elapsedRef = useRef(0);
@@ -120,19 +121,26 @@ export default function HomeScreen() {
   const loadSound = async (s: string) => {
     try {
       await soundRef.current?.unloadAsync();
+      await notifySoundRef.current?.unloadAsync();
       setSoundPlaying(false);
       if (s === 'none') {
         soundRef.current = null;
-        return;
+      } else {
+        const file = SOUND_FILES[s] || SOUND_FILES['normal'];
+        const { sound } = await Audio.Sound.createAsync(file, { shouldPlay: false });
+        await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
+        sound.setOnPlaybackStatusUpdate(status => {
+          if (!status.isLoaded) return;
+          setSoundPlaying(status.isPlaying);
+        });
+        soundRef.current = sound;
       }
-      const file = SOUND_FILES[s] || SOUND_FILES['normal'];
-      const { sound } = await Audio.Sound.createAsync(file, { shouldPlay: false });
-      await sound.setVolumeAsync(state.settings.notificationVolume ?? 1);
-      sound.setOnPlaybackStatusUpdate(status => {
-        if (!status.isLoaded) return;
-        setSoundPlaying(status.isPlaying);
-      });
-      soundRef.current = sound;
+      const { sound: nSound } = await Audio.Sound.createAsync(
+        SOUND_FILES['beep'],
+        { shouldPlay: false }
+      );
+      await nSound.setVolumeAsync(state.settings.notificationVolume ?? 1);
+      notifySoundRef.current = nSound;
     } catch (e) {
       console.warn('Failed to load sound', e);
     }
@@ -143,11 +151,13 @@ export default function HomeScreen() {
     loadSound(name);
     return () => {
       soundRef.current?.unloadAsync().catch(() => {});
+      notifySoundRef.current?.unloadAsync().catch(() => {});
     };
   }, [quickSound, selectedSet?.sound]);
 
   useEffect(() => {
     soundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
+    notifySoundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
 
   useEffect(() => {
@@ -312,6 +322,7 @@ export default function HomeScreen() {
   const start = (init?: number) => {
     let rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     soundRef.current?.stopAsync().catch(() => {});
+    notifySoundRef.current?.stopAsync().catch(() => {});
     setSoundPlaying(false);
     if (selectedSet && !historyId) {
       const id = uuidv4();
@@ -362,6 +373,7 @@ export default function HomeScreen() {
     endTimeRef.current = null;
     setRunning(false);
     soundRef.current?.stopAsync().catch(() => {});
+    notifySoundRef.current?.stopAsync().catch(() => {});
     setSoundPlaying(false);
   };
 
@@ -396,13 +408,14 @@ export default function HomeScreen() {
     const currentIdx = indexRef.current;
     const currentTimer = selectedSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= selectedSet.timers.length;
-    if (
-      (
-        state.settings.enableNotifications &&
-        selectedSet.notifications?.enabled &&
-        currentTimer?.notify !== false
-      ) || isLast
-    ) {
+    const notificationsOn =
+      state.settings.enableNotifications && selectedSet.notifications?.enabled;
+
+    if (notificationsOn && currentTimer?.notify !== false && !isLast) {
+      notifySoundRef.current?.replayAsync().catch(() => {});
+    }
+
+    if (notificationsOn && (currentTimer?.notify !== false || isLast)) {
       soundRef.current?.replayAsync().catch(() => {});
     }
     const duration = getDuration(currentTimer);

@@ -17,10 +17,14 @@ export const SOUND_OPTIONS: SoundOption[] = [
   { value: 'bird', label: '鳥', file: require('../../assets/sounds/bird.mp3') },
   { value: 'chicken', label: 'ニワトリ', file: require('../../assets/sounds/chicken.mp3') },
   { value: 'chime', label: 'チャイム', file: require('../../assets/sounds/chime.mp3') },
-  { value: 'beep', label: 'ビープ', file: require('../../assets/sounds/beep.wav') },
 ];
 
-export const SOUND_FILES: Record<string, any> = SOUND_OPTIONS.reduce((acc, cur) => {
-  acc[cur.value] = cur.file;
-  return acc;
-}, {} as Record<string, any>);
+export const SOUND_FILES: Record<string, any> = SOUND_OPTIONS.reduce(
+  (acc, cur) => {
+    acc[cur.value] = cur.file;
+    return acc;
+  },
+  {
+    beep: require('../../assets/sounds/beep.wav'),
+  } as Record<string, any>
+);
