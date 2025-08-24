@@ -322,7 +322,6 @@ export default function HomeScreen() {
   const start = (init?: number) => {
     let rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     soundRef.current?.stopAsync().catch(() => {});
-    notifySoundRef.current?.stopAsync().catch(() => {});
     setSoundPlaying(false);
     if (selectedSet && !historyId) {
       const id = uuidv4();
@@ -403,7 +402,7 @@ export default function HomeScreen() {
     }
   };
 
-  const endOne = () => {
+  const endOne = async () => {
     if (!selectedSet) return;
     const currentIdx = indexRef.current;
     const currentTimer = selectedSet.timers[currentIdx];
@@ -411,27 +410,43 @@ export default function HomeScreen() {
     const notificationsOn =
       state.settings.enableNotifications && selectedSet.notifications?.enabled;
 
-    if (notificationsOn && currentTimer?.notify !== false && !isLast) {
-      notifySoundRef.current?.replayAsync().catch(() => {});
+    let delay = 0;
+    if (currentTimer?.notify !== false && !isLast) {
+      try {
+        await notifySoundRef.current?.replayAsync();
+        const status = await notifySoundRef.current?.getStatusAsync();
+        if (status && status.isLoaded) {
+          delay = status.durationMillis ?? 0;
+        }
+      } catch {}
     }
 
     if (notificationsOn && (currentTimer?.notify !== false || isLast)) {
       soundRef.current?.replayAsync().catch(() => {});
     }
+
     const duration = getDuration(currentTimer);
     const newRun = runCount + 1;
     const newTotal = totalSec + duration;
     setRunCount(newRun);
     setTotalSec(newTotal);
+
     if (currentIdx + 1 < selectedSet.timers.length) {
       const nextIdx = currentIdx + 1;
       const nextDur = getDuration(selectedSet.timers[nextIdx]);
-      setIndex(nextIdx);
-      indexRef.current = nextIdx;
-      setRemaining(nextDur);
-      elapsedRef.current = elapsed;
-      lastUpdateRef.current = Date.now();
-      startRef.current(nextDur);
+      const startNext = () => {
+        setIndex(nextIdx);
+        indexRef.current = nextIdx;
+        setRemaining(nextDur);
+        elapsedRef.current = elapsed;
+        lastUpdateRef.current = Date.now();
+        startRef.current(nextDur);
+      };
+      if (delay > 0) {
+        setTimeout(startNext, delay);
+      } else {
+        startNext();
+      }
     } else {
       setRunning(false);
       if (historyId) {
