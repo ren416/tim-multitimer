@@ -7,6 +7,7 @@ import {
   Pressable,
   Modal,
   TextInput,
+  GestureResponderEvent,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState, Timer } from '../context/TimerContext';
@@ -330,7 +331,8 @@ export default function HomeScreen() {
     setInputVisible(false);
   };
 
-  const start = (init?: number) => {
+  const start = (initParam?: number | unknown) => {
+    const init = typeof initParam === 'number' ? initParam : undefined;
     if (nextTimeoutRef.current) {
       clearTimeout(nextTimeoutRef.current);
       nextTimeoutRef.current = null;
@@ -344,6 +346,7 @@ export default function HomeScreen() {
       setHistoryId(id);
       setRunCount(0);
       setTotalSec(0);
+      historyRef.current = { id, total: 0, run: 0 };
       // Ensure a new run always begins from the first timer
       setIndex(0);
       indexRef.current = 0;
@@ -354,7 +357,12 @@ export default function HomeScreen() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (rem <= 0) {
       setRemaining(0);
-      if (selectedSet) endOne();
+      if (selectedSet) {
+        // Keep the run state active so that delayed transitions (e.g. when
+        // playing a notification sound) can still advance to the next timer.
+        runningRef.current = true;
+        endOne();
+      }
       return;
     }
     elapsedRef.current = elapsed;
@@ -555,7 +563,7 @@ export default function HomeScreen() {
             <IconButton
               label="開始"
               icon="play"
-              onPress={start}
+              onPress={() => start()}
               disabled={running || (!selectedSet && remaining <= 0)}
               style={{ flex: 1 }}
             />
