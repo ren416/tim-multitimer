@@ -178,7 +178,10 @@ export default function HomeScreen() {
   useEffect(() => {
     let raf: number;
     const tick = () => {
-      const diff = (Date.now() - lastUpdateRef.current) / 1000;
+      const diff =
+        endTimeRef.current != null
+          ? (Date.now() - lastUpdateRef.current) / 1000
+          : 0;
       const estElapsed = elapsedRef.current + diff;
       const p = totalDuration > 0 ? estElapsed / totalDuration : 0;
       setProgress(clampProgress(p));
@@ -377,6 +380,7 @@ export default function HomeScreen() {
       if (left <= 0) {
         clearInterval(intervalRef.current!);
         intervalRef.current = null;
+        endTimeRef.current = null;
         setRemaining(0);
       } else {
         setRemaining(left);
