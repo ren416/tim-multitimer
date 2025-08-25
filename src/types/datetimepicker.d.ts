@@ -3,7 +3,7 @@ declare module '@react-native-community/datetimepicker' {
   export interface DateTimePickerProps {
     value: Date;
     mode?: 'date' | 'time';
-    display?: 'default' | 'spinner' | 'calendar';
+    display?: 'default' | 'spinner' | 'calendar' | 'inline';
     onChange: (event: any, date?: Date) => void;
   }
   export default class DateTimePicker extends React.Component<DateTimePickerProps> {}

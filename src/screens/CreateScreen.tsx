@@ -409,35 +409,64 @@ export default function CreateScreen({ route, navigation }: any) {
           </View>
           {notify && (
             <>
-              <Pressable style={styles.select} onPress={() => setShowDatePicker(true)}>
-                <Text style={styles.notifyLabel}>日付</Text>
-                <Text style={styles.selectValue}>{dayjs(notifyDate).format('YYYY-MM-DD')}</Text>
-              </Pressable>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={notifyDate}
-                  mode="date"
-                  display="calendar"
-                  onChange={(e, d) => {
-                    setShowDatePicker(false);
-                    if (d) setNotifyDate(d);
-                  }}
-                />
-              )}
-              <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
-                <Text style={styles.notifyLabel}>時間</Text>
-                <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
-              </Pressable>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={notifyTime}
-                  mode="time"
-                  display="spinner"
-                  onChange={(e, d) => {
-                    setShowTimePicker(false);
-                    if (d) setNotifyTime(d);
-                  }}
-                />
+              {Platform.OS === 'web' ? (
+                <>
+                  <View style={styles.select}>
+                    <Text style={styles.notifyLabel}>日付</Text>
+                    <input
+                      type="date"
+                      value={dayjs(notifyDate).format('YYYY-MM-DD')}
+                      onChange={(e: any) => setNotifyDate(dayjs(e.target.value).toDate())}
+                      style={{ flex: 1, textAlign: 'right' }}
+                    />
+                  </View>
+                  <View style={styles.select}>
+                    <Text style={styles.notifyLabel}>時間</Text>
+                    <input
+                      type="time"
+                      value={dayjs(notifyTime).format('HH:mm')}
+                      onChange={(e: any) => {
+                        const [h, m] = e.target.value.split(':');
+                        const dt = dayjs().hour(Number(h)).minute(Number(m)).second(0).toDate();
+                        setNotifyTime(dt);
+                      }}
+                      style={{ flex: 1, textAlign: 'right' }}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Pressable style={styles.select} onPress={() => setShowDatePicker(true)}>
+                    <Text style={styles.notifyLabel}>日付</Text>
+                    <Text style={styles.selectValue}>{dayjs(notifyDate).format('YYYY-MM-DD')}</Text>
+                  </Pressable>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={notifyDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                      onChange={(e, d) => {
+                        setShowDatePicker(false);
+                        if (d) setNotifyDate(d);
+                      }}
+                    />
+                  )}
+                  <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
+                    <Text style={styles.notifyLabel}>時間</Text>
+                    <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
+                  </Pressable>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={notifyTime}
+                      mode="time"
+                      display="spinner"
+                      onChange={(e, d) => {
+                        setShowTimePicker(false);
+                        if (d) setNotifyTime(d);
+                      }}
+                    />
+                  )}
+                </>
               )}
               <View style={styles.notifyRow}>
                 <Text style={styles.notifyLabel}>繰り返し</Text>
@@ -467,19 +496,16 @@ export default function CreateScreen({ route, navigation }: any) {
                   </View>
                   {repeatMode === 'interval' && (
                     <View style={styles.timeRow}>
-                      <Picker
+                      <TextInput
+                        keyboardType="number-pad"
+                        value={repeatNum}
+                        onChangeText={setRepeatNum}
                         style={[styles.timerInput, { flex: 1 }]}
-                        selectedValue={repeatNum}
-                        onValueChange={v => setRepeatNum(String(v))}
-                      >
-                        {Array.from({ length: 60 }, (_, i) => i + 1).map(n => (
-                          <Picker.Item key={n} label={`${n}`} value={`${n}`} />
-                        ))}
-                      </Picker>
+                      />
                       <Picker
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
                         selectedValue={repeatUnit}
-                        onValueChange={v => setRepeatUnit(v as any)}
+                        onValueChange={itemValue => setRepeatUnit(itemValue)}
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
                       >
                         <Picker.Item label="分" value="minute" />
                         <Picker.Item label="時間" value="hour" />
@@ -605,35 +631,64 @@ export default function CreateScreen({ route, navigation }: any) {
           </View>
           {notify && (
             <>
-              <Pressable style={styles.select} onPress={() => setShowDatePicker(true)}>
-                <Text style={styles.notifyLabel}>日付</Text>
-                <Text style={styles.selectValue}>{dayjs(notifyDate).format('YYYY-MM-DD')}</Text>
-              </Pressable>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={notifyDate}
-                  mode="date"
-                  display="calendar"
-                  onChange={(e, d) => {
-                    setShowDatePicker(false);
-                    if (d) setNotifyDate(d);
-                  }}
-                />
-              )}
-              <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
-                <Text style={styles.notifyLabel}>時間</Text>
-                <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
-              </Pressable>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={notifyTime}
-                  mode="time"
-                  display="spinner"
-                  onChange={(e, d) => {
-                    setShowTimePicker(false);
-                    if (d) setNotifyTime(d);
-                  }}
-                />
+              {Platform.OS === 'web' ? (
+                <>
+                  <View style={styles.select}>
+                    <Text style={styles.notifyLabel}>日付</Text>
+                    <input
+                      type="date"
+                      value={dayjs(notifyDate).format('YYYY-MM-DD')}
+                      onChange={(e: any) => setNotifyDate(dayjs(e.target.value).toDate())}
+                      style={{ flex: 1, textAlign: 'right' }}
+                    />
+                  </View>
+                  <View style={styles.select}>
+                    <Text style={styles.notifyLabel}>時間</Text>
+                    <input
+                      type="time"
+                      value={dayjs(notifyTime).format('HH:mm')}
+                      onChange={(e: any) => {
+                        const [h, m] = e.target.value.split(':');
+                        const dt = dayjs().hour(Number(h)).minute(Number(m)).second(0).toDate();
+                        setNotifyTime(dt);
+                      }}
+                      style={{ flex: 1, textAlign: 'right' }}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Pressable style={styles.select} onPress={() => setShowDatePicker(true)}>
+                    <Text style={styles.notifyLabel}>日付</Text>
+                    <Text style={styles.selectValue}>{dayjs(notifyDate).format('YYYY-MM-DD')}</Text>
+                  </Pressable>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={notifyDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                      onChange={(e, d) => {
+                        setShowDatePicker(false);
+                        if (d) setNotifyDate(d);
+                      }}
+                    />
+                  )}
+                  <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
+                    <Text style={styles.notifyLabel}>時間</Text>
+                    <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
+                  </Pressable>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={notifyTime}
+                      mode="time"
+                      display="spinner"
+                      onChange={(e, d) => {
+                        setShowTimePicker(false);
+                        if (d) setNotifyTime(d);
+                      }}
+                    />
+                  )}
+                </>
               )}
               <View style={styles.notifyRow}>
                 <Text style={styles.notifyLabel}>繰り返し</Text>
@@ -663,19 +718,16 @@ export default function CreateScreen({ route, navigation }: any) {
                   </View>
                   {repeatMode === 'interval' && (
                     <View style={styles.timeRow}>
-                      <Picker
+                      <TextInput
+                        keyboardType="number-pad"
+                        value={repeatNum}
+                        onChangeText={setRepeatNum}
                         style={[styles.timerInput, { flex: 1 }]}
-                        selectedValue={repeatNum}
-                        onValueChange={v => setRepeatNum(String(v))}
-                      >
-                        {Array.from({ length: 60 }, (_, i) => i + 1).map(n => (
-                          <Picker.Item key={n} label={`${n}`} value={`${n}`} />
-                        ))}
-                      </Picker>
+                      />
                       <Picker
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
                         selectedValue={repeatUnit}
-                        onValueChange={v => setRepeatUnit(v as any)}
+                        onValueChange={itemValue => setRepeatUnit(itemValue)}
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
                       >
                         <Picker.Item label="分" value="minute" />
                         <Picker.Item label="時間" value="hour" />
