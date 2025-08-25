@@ -46,7 +46,7 @@ export const scheduleTimerSetNotification = async (
     if (dayjs(trigger).isAfter(dayjs())) {
       const id = await Notifications.scheduleNotificationAsync({
         content,
-        trigger,
+        trigger: { date: triggerDate.getTime() },
       });
       ids.push(id);
     }
