@@ -13,8 +13,8 @@
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",
     "@react-native-async-storage/async-storage": "1.23.1",
-    "@react-native-community/slider": "^4.4.5",
-    "@react-native-picker/picker": "^2.6.1",
+    "@react-native-community/slider": "4.5.5",
+    "@react-native-picker/picker": "2.9.0",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.9.26",
@@ -33,7 +33,8 @@
     "victory-native": "^36.6.11",
     "react-dom": "18.3.1",
     "react-native-web": "~0.19.13",
-    "@expo/metro-runtime": "~4.0.1"
+    "@expo/metro-runtime": "~4.0.1",
+    "@types/react": "~18.3.12"
   },
   "devDependencies": {
     "@types/react": "~18.2.45",
