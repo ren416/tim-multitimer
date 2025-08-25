@@ -1,22 +1,23 @@
 import * as Notifications from 'expo-notifications';
 import dayjs from 'dayjs';
-import { TimerSet, NotificationConfig } from '../context/TimerContext';
+import { TimerSet, NotificationConfig, RepeatIntervalUnit } from '../context/TimerContext';
 
-const unitToSeconds = (every: number, unit: string) => {
-  switch (unit) {
-    case 'minute':
-      return every * 60;
-    case 'hour':
-      return every * 3600;
-    case 'day':
-      return every * 86400;
-    case 'week':
-      return every * 7 * 86400;
-    case 'year':
-      return every * 365 * 86400;
-    default:
-      return every * 60;
-  }
+const unitSeconds: Record<RepeatIntervalUnit, number> = {
+  minute: 60,
+  hour: 3600,
+  day: 86400,
+  week: 7 * 86400,
+  year: 365 * 86400,
+};
+
+const unitToSeconds = (every: number, unit: string) =>
+  (unitSeconds[unit as RepeatIntervalUnit] ?? 60) * every;
+
+const ensurePermissions = async () => {
+  const permissions = await Notifications.getPermissionsAsync();
+  if (permissions.granted) return true;
+  const result = await Notifications.requestPermissionsAsync();
+  return result.granted;
 };
 
 export const scheduleTimerSetNotification = async (
@@ -25,69 +26,65 @@ export const scheduleTimerSetNotification = async (
   const cfg: NotificationConfig | undefined = set.notifications;
   if (!cfg?.enabled) return [];
 
-  const permissions = await Notifications.getPermissionsAsync();
-  if (!permissions.granted) {
-    const result = await Notifications.requestPermissionsAsync();
-    if (!result.granted) {
-      console.warn('Notification permissions not granted');
-      return [];
-    }
+  if (!(await ensurePermissions())) {
+    console.warn('Notification permissions not granted');
+    return [];
   }
 
-    const base = dayjs(`${cfg.date}T${cfg.time}`);
-    const ids: string[] = [];
-    const content: Notifications.NotificationContentInput = {
-      title: 'タイマー通知',
-      body: `${set.name}の時間です！`,
-    };
+  const base = dayjs(`${cfg.date}T${cfg.time}`);
+  const content: Notifications.NotificationContentInput = {
+    title: 'タイマー通知',
+    body: `${set.name}の時間です！`,
+  };
 
-    if (!cfg.repeat) {
-      const triggerDate = base.toDate();
-      if (dayjs(triggerDate).isAfter(dayjs())) {
-        const id = await Notifications.scheduleNotificationAsync({
-          content,
-          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
-        });
-        ids.push(id);
-      }
-      return ids;
+  if (!cfg.repeat) {
+    const triggerDate = base.toDate();
+    if (dayjs(triggerDate).isAfter(dayjs())) {
+      const id = await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+      });
+      return [id];
     }
+    return [];
+  }
 
-    let trigger: Notifications.NotificationTriggerInput | null = null;
-
-    if (cfg.repeat.mode === 'interval') {
-      trigger = {
+  const ids: string[] = [];
+  switch (cfg.repeat.mode) {
+    case 'interval': {
+      const trigger: Notifications.NotificationTriggerInput = {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: unitToSeconds(cfg.repeat.every, cfg.repeat.unit),
         repeats: true,
       };
       const id = await Notifications.scheduleNotificationAsync({ content, trigger });
       ids.push(id);
-    } else if (cfg.repeat.mode === 'weekday') {
+      break;
+    }
+    case 'weekday': {
       for (const wd of cfg.repeat.weekdays) {
         const notificationWd = wd + 1;
-        let weeklyTrigger: Notifications.NotificationTriggerInput;
-
-        if (cfg.repeat.intervalWeeks === 1) {
-          weeklyTrigger = {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-            weekday: notificationWd,
-            hour: base.hour(),
-            minute: base.minute(),
-            repeats: true,
-          };
-        } else {
-          weeklyTrigger = {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: cfg.repeat.intervalWeeks * 7 * 86400,
-            repeats: true,
-          };
-        }
-        const id = await Notifications.scheduleNotificationAsync({ content, trigger: weeklyTrigger });
+        const trigger: Notifications.NotificationTriggerInput =
+          cfg.repeat.intervalWeeks === 1
+            ? {
+                type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+                weekday: notificationWd,
+                hour: base.hour(),
+                minute: base.minute(),
+                repeats: true,
+              }
+            : {
+                type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+                seconds: cfg.repeat.intervalWeeks * 7 * 86400,
+                repeats: true,
+              };
+        const id = await Notifications.scheduleNotificationAsync({ content, trigger });
         ids.push(id);
       }
-    } else if (cfg.repeat.mode === 'monthly') {
-      trigger = {
+      break;
+    }
+    case 'monthly': {
+      const trigger: Notifications.NotificationTriggerInput = {
         type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
         weekday: cfg.repeat.weekday + 1,
         weekOfMonth: cfg.repeat.nthWeek,
@@ -97,7 +94,9 @@ export const scheduleTimerSetNotification = async (
       };
       const id = await Notifications.scheduleNotificationAsync({ content, trigger });
       ids.push(id);
+      break;
     }
+  }
 
   return ids;
 };
