@@ -46,7 +46,10 @@ export const scheduleTimerSetNotification = async (
     if (dayjs(triggerDate).isAfter(dayjs())) {
       const id = await Notifications.scheduleNotificationAsync({
         content,
-        trigger: { date: triggerDate.getTime() },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: triggerDate.getTime(),
+        },
       });
       ids.push(id);
     }
@@ -57,6 +60,7 @@ export const scheduleTimerSetNotification = async (
 
   if (cfg.repeat.mode === 'interval') {
     trigger = {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: unitToSeconds(cfg.repeat.every, cfg.repeat.unit),
       repeats: true,
     };
@@ -69,6 +73,7 @@ export const scheduleTimerSetNotification = async (
 
       if (cfg.repeat.intervalWeeks === 1) {
         weeklyTrigger = {
+          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
           weekday: notificationWd,
           hour: base.hour(),
           minute: base.minute(),
@@ -76,6 +81,7 @@ export const scheduleTimerSetNotification = async (
         };
       } else {
         weeklyTrigger = {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: cfg.repeat.intervalWeeks * 7 * 86400,
           repeats: true,
         };
@@ -85,6 +91,7 @@ export const scheduleTimerSetNotification = async (
     }
   } else if (cfg.repeat.mode === 'monthly') {
     trigger = {
+      type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
       weekday: cfg.repeat.weekday + 1,
       weekOfMonth: cfg.repeat.nthWeek,
       hour: base.hour(),
