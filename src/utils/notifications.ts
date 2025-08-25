@@ -34,66 +34,70 @@ export const scheduleTimerSetNotification = async (
     }
   }
 
-  const base = dayjs(`${cfg.date}T${cfg.time}`);
-  const ids: string[] = [];
-  const content: Notifications.NotificationContentInput = {
-    title: 'タイマー通知',
-    body: `${set.name}の時間です！`,
-  };
-
-  if (!cfg.repeat) {
-    const trigger = base.toDate();
-    if (dayjs(trigger).isAfter(dayjs())) {
-      const id = await Notifications.scheduleNotificationAsync({
-        content,
-        trigger: { date: triggerDate.getTime() },
-      });
-      ids.push(id);
-    }
-    return ids;
-  }
-
-  let trigger: Notifications.NotificationTriggerInput | null = null;
-
-  if (cfg.repeat.mode === 'interval') {
-    trigger = {
-      seconds: unitToSeconds(cfg.repeat.every, cfg.repeat.unit),
-      repeats: true,
+    const base = dayjs(`${cfg.date}T${cfg.time}`);
+    const ids: string[] = [];
+    const content: Notifications.NotificationContentInput = {
+      title: 'タイマー通知',
+      body: `${set.name}の時間です！`,
     };
-    const id = await Notifications.scheduleNotificationAsync({ content, trigger });
-    ids.push(id);
-  } else if (cfg.repeat.mode === 'weekday') {
-    for (const wd of cfg.repeat.weekdays) {
-      const notificationWd = wd + 1;
-      let weeklyTrigger: Notifications.NotificationTriggerInput;
 
-      if (cfg.repeat.intervalWeeks === 1) {
-        weeklyTrigger = {
-          weekday: notificationWd,
-          hour: base.hour(),
-          minute: base.minute(),
-          repeats: true,
-        };
-      } else {
-        weeklyTrigger = {
-          seconds: cfg.repeat.intervalWeeks * 7 * 86400,
-          repeats: true,
-        };
+    if (!cfg.repeat) {
+      const triggerDate = base.toDate();
+      if (dayjs(triggerDate).isAfter(dayjs())) {
+        const id = await Notifications.scheduleNotificationAsync({
+          content,
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+        });
+        ids.push(id);
       }
-      const id = await Notifications.scheduleNotificationAsync({ content, trigger: weeklyTrigger });
+      return ids;
+    }
+
+    let trigger: Notifications.NotificationTriggerInput | null = null;
+
+    if (cfg.repeat.mode === 'interval') {
+      trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: unitToSeconds(cfg.repeat.every, cfg.repeat.unit),
+        repeats: true,
+      };
+      const id = await Notifications.scheduleNotificationAsync({ content, trigger });
+      ids.push(id);
+    } else if (cfg.repeat.mode === 'weekday') {
+      for (const wd of cfg.repeat.weekdays) {
+        const notificationWd = wd + 1;
+        let weeklyTrigger: Notifications.NotificationTriggerInput;
+
+        if (cfg.repeat.intervalWeeks === 1) {
+          weeklyTrigger = {
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            weekday: notificationWd,
+            hour: base.hour(),
+            minute: base.minute(),
+            repeats: true,
+          };
+        } else {
+          weeklyTrigger = {
+            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+            seconds: cfg.repeat.intervalWeeks * 7 * 86400,
+            repeats: true,
+          };
+        }
+        const id = await Notifications.scheduleNotificationAsync({ content, trigger: weeklyTrigger });
+        ids.push(id);
+      }
+    } else if (cfg.repeat.mode === 'monthly') {
+      trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        weekday: cfg.repeat.weekday + 1,
+        weekOfMonth: cfg.repeat.nthWeek,
+        hour: base.hour(),
+        minute: base.minute(),
+        repeats: true,
+      };
+      const id = await Notifications.scheduleNotificationAsync({ content, trigger });
       ids.push(id);
     }
-  } else if (cfg.repeat.mode === 'monthly') {
-    trigger = {
-      weekday: cfg.repeat.weekday + 1,
-      weekOfMonth: cfg.repeat.nthWeek,
-      hour: base.hour(),
-      minute: base.minute(),
-      repeats: true,
-    };
-    const id = await Notifications.scheduleNotificationAsync({ content, trigger });
-    ids.push(id);
-  }
 
   return ids;
 };
