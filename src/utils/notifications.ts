@@ -42,20 +42,21 @@ export const scheduleTimerSetNotification = async (
   };
 
   if (!cfg.repeat) {
-    const trigger = base.toDate();
-    if (dayjs(trigger).isAfter(dayjs())) {
+    const triggerDate = base.toDate();
+    if (dayjs(triggerDate).isAfter(dayjs())) {
       const id = await Notifications.scheduleNotificationAsync({
         content,
-        trigger,
+        trigger: { date: triggerDate.getTime() },
       });
       ids.push(id);
     }
     return ids;
   }
 
+  let trigger: Notifications.NotificationTriggerInput | null = null;
+
   if (cfg.repeat.mode === 'interval') {
-    const trigger: Notifications.TimeIntervalTriggerInput = {
-      type: 'timeInterval',
+    trigger = {
       seconds: unitToSeconds(cfg.repeat.every, cfg.repeat.unit),
       repeats: true,
     };
@@ -63,30 +64,27 @@ export const scheduleTimerSetNotification = async (
     ids.push(id);
   } else if (cfg.repeat.mode === 'weekday') {
     for (const wd of cfg.repeat.weekdays) {
-      let trigger: Notifications.NotificationTriggerInput;
       const notificationWd = wd + 1;
+      let weeklyTrigger: Notifications.NotificationTriggerInput;
 
       if (cfg.repeat.intervalWeeks === 1) {
-        trigger = {
-          type: 'weekly',
+        weeklyTrigger = {
           weekday: notificationWd,
           hour: base.hour(),
           minute: base.minute(),
           repeats: true,
         };
       } else {
-        trigger = {
-          type: 'timeInterval',
+        weeklyTrigger = {
           seconds: cfg.repeat.intervalWeeks * 7 * 86400,
           repeats: true,
         };
       }
-      const id = await Notifications.scheduleNotificationAsync({ content, trigger });
+      const id = await Notifications.scheduleNotificationAsync({ content, trigger: weeklyTrigger });
       ids.push(id);
     }
   } else if (cfg.repeat.mode === 'monthly') {
-    const trigger: Notifications.CalendarTriggerInput = {
-      type: 'calendar',
+    trigger = {
       weekday: cfg.repeat.weekday + 1,
       weekOfMonth: cfg.repeat.nthWeek,
       hour: base.hour(),
@@ -96,6 +94,7 @@ export const scheduleTimerSetNotification = async (
     const id = await Notifications.scheduleNotificationAsync({ content, trigger });
     ids.push(id);
   }
+
   return ids;
 };
 
