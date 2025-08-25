@@ -19,8 +19,10 @@ export type TimerSet = {
   sound?: string; // asset path
   notifications?: {
     enabled: boolean;
-    start?: string;
-    end?: string;
+    scheduleType?: 'datetime' | 'interval';
+    dateTime?: string; // ISO string
+    intervalSec?: number; // seconds
+    id?: string; // scheduled notification identifier
   };
   createdAt: string;
   updatedAt: string;

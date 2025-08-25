@@ -18,6 +18,7 @@ import { useTimerState } from '../context/TimerContext';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
 import { SOUND_OPTIONS } from '../constants/sounds';
+import { scheduleTimerSetNotification, cancelTimerSetNotification } from '../utils/notifications';
 
 type Stage =
   | 'choose'
@@ -34,8 +35,9 @@ export default function CreateScreen({ route, navigation }: any) {
   const [stage, setStage] = useState<Stage>('choose');
   const [setName, setSetName] = useState('');
   const [notify, setNotify] = useState(false);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [notifyType, setNotifyType] = useState<'datetime' | 'interval'>('datetime');
+  const [dateTime, setDateTime] = useState('');
+  const [intervalMin, setIntervalMin] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [timers, setTimers] = useState<TimerInput[]>([]);
   const [sound, setSound] = useState('normal');
@@ -45,8 +47,9 @@ export default function CreateScreen({ route, navigation }: any) {
     setStage('choose');
     setSetName('');
     setNotify(false);
-    setStartTime('');
-    setEndTime('');
+    setNotifyType('datetime');
+    setDateTime('');
+    setIntervalMin('');
     setSelectedId('');
     setTimers([]);
     setSound('normal');
@@ -109,6 +112,21 @@ export default function CreateScreen({ route, navigation }: any) {
     setSelectedId(id);
     setSetName(set.name);
     setSound(set.sound || 'normal');
+    if (set.notifications?.enabled) {
+      setNotify(true);
+      if (set.notifications.scheduleType === 'interval') {
+        setNotifyType('interval');
+        setIntervalMin(String((set.notifications.intervalSec || 0) / 60));
+      } else {
+        setNotifyType('datetime');
+        setDateTime(set.notifications.dateTime || '');
+      }
+    } else {
+      setNotify(false);
+        setNotifyType('datetime');
+        setDateTime('');
+        setIntervalMin('');
+      }
     setTimers(
       set.timers.map(t => ({
         id: t.id,
@@ -134,7 +152,7 @@ export default function CreateScreen({ route, navigation }: any) {
   const addTimerRow = () =>
     setTimers(prev => [...prev, { label: '', min: '', sec: '', notify: true }]);
 
-  const saveNew = () => {
+  const saveNew = async () => {
     const parsed = timers
       .map((t, i) => {
         const m = parseInt(t.min || '0', 10);
@@ -153,6 +171,18 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('作成できません', 'タイマーを入力してください。');
       return;
     }
+    let notifId: string | undefined;
+    if (notify) {
+      notifId = await scheduleTimerSetNotification({
+        name: setName,
+        notifications: {
+          enabled: true,
+          scheduleType: notifyType,
+          dateTime,
+          intervalSec: notifyType === 'interval' ? parseInt(intervalMin || '0', 10) * 60 : undefined,
+        },
+      });
+    }
     dispatch({
       type: 'ADD_SET',
       payload: {
@@ -160,7 +190,15 @@ export default function CreateScreen({ route, navigation }: any) {
         description: '',
         timers: parsed as any,
         sound,
-        notifications: notify ? { enabled: true, start: startTime, end: endTime } : { enabled: false },
+        notifications: notify
+          ? {
+              enabled: true,
+              scheduleType: notifyType,
+              dateTime,
+              intervalSec: notifyType === 'interval' ? parseInt(intervalMin || '0', 10) * 60 : undefined,
+              id: notifId,
+            }
+          : { enabled: false },
       },
     });
     Alert.alert('作成しました', '新しいタイマーセットを作成しました。');
@@ -168,7 +206,7 @@ export default function CreateScreen({ route, navigation }: any) {
     navigation.goBack();
   };
 
-  const saveExisting = () => {
+  const saveExisting = async () => {
     const target = state.timerSets.find(s => s.id === selectedId);
     if (!target) return;
     const parsed = timers
@@ -189,7 +227,34 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('更新できません', 'タイマーを入力してください。');
       return;
     }
-    const updated = { ...target, name: setName, timers: parsed as any, sound };
+    await cancelTimerSetNotification(target.notifications?.id);
+    let notifId: string | undefined;
+    if (notify) {
+      notifId = await scheduleTimerSetNotification({
+        name: setName,
+        notifications: {
+          enabled: true,
+          scheduleType: notifyType,
+          dateTime,
+          intervalSec: notifyType === 'interval' ? parseInt(intervalMin || '0', 10) * 60 : undefined,
+        },
+      });
+    }
+    const updated = {
+      ...target,
+      name: setName,
+      timers: parsed as any,
+      sound,
+      notifications: notify
+        ? {
+            enabled: true,
+            scheduleType: notifyType,
+            dateTime,
+            intervalSec: notifyType === 'interval' ? parseInt(intervalMin || '0', 10) * 60 : undefined,
+            id: notifId,
+          }
+        : { enabled: false },
+    };
     dispatch({ type: 'UPDATE_SET', payload: updated });
     Alert.alert('更新しました', `${setName} を更新しました。`);
     reset();
@@ -294,18 +359,36 @@ export default function CreateScreen({ route, navigation }: any) {
           </View>
           {notify && (
             <>
-              <TextInput
-                value={startTime}
-                onChangeText={setStartTime}
-                placeholder="開始時刻 (例: 09:00)"
-                style={styles.input}
-              />
-              <TextInput
-                value={endTime}
-                onChangeText={setEndTime}
-                placeholder="終了時刻 (例: 18:00)"
-                style={styles.input}
-              />
+              <View style={styles.notifyRow}>
+                <Pressable
+                  style={[styles.option, notifyType === 'datetime' && styles.optionActive]}
+                  onPress={() => setNotifyType('datetime')}
+                >
+                  <Text style={styles.notifyLabel}>日時指定</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.option, notifyType === 'interval' && styles.optionActive]}
+                  onPress={() => setNotifyType('interval')}
+                >
+                  <Text style={styles.notifyLabel}>間隔</Text>
+                </Pressable>
+              </View>
+              {notifyType === 'datetime' ? (
+                <TextInput
+                  value={dateTime}
+                  onChangeText={setDateTime}
+                  placeholder="YYYY-MM-DD HH:mm"
+                  style={styles.input}
+                />
+              ) : (
+                <TextInput
+                  value={intervalMin}
+                  onChangeText={setIntervalMin}
+                  placeholder="間隔(分)"
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              )}
             </>
           )}
           <IconButton
@@ -354,6 +437,44 @@ export default function CreateScreen({ route, navigation }: any) {
             <Text style={styles.notifyLabel}>終了音</Text>
             <Text style={styles.selectValue}>{SOUND_OPTIONS.find(s => s.value === sound)?.label}</Text>
           </Pressable>
+          <View style={styles.notifyRow}>
+            <Text style={styles.notifyLabel}>通知を有効にする</Text>
+            <Switch value={notify} onValueChange={setNotify} />
+          </View>
+          {notify && (
+            <>
+              <View style={styles.notifyRow}>
+                <Pressable
+                  style={[styles.option, notifyType === 'datetime' && styles.optionActive]}
+                  onPress={() => setNotifyType('datetime')}
+                >
+                  <Text style={styles.notifyLabel}>日時指定</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.option, notifyType === 'interval' && styles.optionActive]}
+                  onPress={() => setNotifyType('interval')}
+                >
+                  <Text style={styles.notifyLabel}>間隔</Text>
+                </Pressable>
+              </View>
+              {notifyType === 'datetime' ? (
+                <TextInput
+                  value={dateTime}
+                  onChangeText={setDateTime}
+                  placeholder="YYYY-MM-DD HH:mm"
+                  style={styles.input}
+                />
+              ) : (
+                <TextInput
+                  value={intervalMin}
+                  onChangeText={setIntervalMin}
+                  placeholder="間隔(分)"
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              )}
+            </>
+          )}
           <Text style={[styles.title, { marginTop: 20 }]}>タイマーを設定</Text>
           {renderTimerRows()}
           <IconButton
@@ -423,6 +544,18 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   selectValue: { color: Colors.text, fontWeight: '700' },
+  option: {
+    flex: 1,
+    padding: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  optionActive: {
+    borderColor: Colors.primary,
+  },
   timerBlock: {
     marginTop: 12,
     backgroundColor: '#fff',
