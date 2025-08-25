@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Dimensions,
+  UIManager,
+  findNodeHandle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -35,6 +38,7 @@ type TimerInput = { id?: string; label?: string; min: string; sec: string; notif
 
 export default function CreateScreen({ route, navigation }: any) {
   const { state, dispatch } = useTimerState();
+  const scrollRef = useRef<ScrollView>(null);
 
   const [stage, setStage] = useState<Stage>('choose');
   const [setName, setSetName] = useState('');
@@ -55,6 +59,13 @@ export default function CreateScreen({ route, navigation }: any) {
   const [timers, setTimers] = useState<TimerInput[]>([]);
   const [sound, setSound] = useState('normal');
   const [soundModal, setSoundModal] = useState(false);
+  const [tempNotifyTime, setTempNotifyTime] = useState<Date>(new Date());
+  const [showRepeatUnitPicker, setShowRepeatUnitPicker] = useState(false);
+  const [tempRepeatUnit, setTempRepeatUnit] = useState<'minute' | 'hour' | 'day' | 'week' | 'year'>('day');
+  const [showNthWeekPicker, setShowNthWeekPicker] = useState(false);
+  const [tempNthWeek, setTempNthWeek] = useState(1);
+  const [showWeekdayPicker, setShowWeekdayPicker] = useState(false);
+  const [tempWeekday, setTempWeekday] = useState(0);
 
   const reset = () => {
     setStage('choose');
@@ -62,12 +73,19 @@ export default function CreateScreen({ route, navigation }: any) {
     setNotify(false);
     setNotifyDate(new Date());
     setNotifyTime(new Date());
+    setTempNotifyTime(new Date());
     setShowDatePicker(false);
     setShowTimePicker(false);
     setRepeatEnabled(false);
     setRepeatMode('interval');
     setRepeatNum('1');
     setRepeatUnit('day');
+    setTempRepeatUnit('day');
+    setShowRepeatUnitPicker(false);
+    setShowNthWeekPicker(false);
+    setTempNthWeek(1);
+    setShowWeekdayPicker(false);
+    setTempWeekday(0);
     setRepeatWeekInterval('every');
     setRepeatWeekdays([]);
     setRepeatNthWeek(1);
@@ -81,6 +99,50 @@ export default function CreateScreen({ route, navigation }: any) {
   const handleCancel = () => {
     reset();
     navigation.navigate('タイマー一覧');
+  };
+
+  const scrollToInput = (target: number) => {
+    const scrollHandle = findNodeHandle(scrollRef.current);
+    if (!scrollHandle) return;
+    UIManager.measureLayout(
+      target,
+      scrollHandle,
+      () => {},
+      (_x, y, _w, h) => {
+        const screenHeight = Dimensions.get('window').height;
+        const desiredCenter = screenHeight / 2 - 60;
+        const offset = y + h / 2 - desiredCenter;
+        scrollRef.current?.scrollTo({ y: offset > 0 ? offset : 0, animated: true });
+      },
+    );
+  };
+
+  const confirmTimePicker = () => {
+    setNotifyTime(tempNotifyTime);
+    setShowTimePicker(false);
+  };
+
+  const confirmRepeatUnit = () => {
+    setRepeatUnit(tempRepeatUnit);
+    setShowRepeatUnitPicker(false);
+  };
+
+  const confirmNthWeek = () => {
+    setRepeatNthWeek(tempNthWeek);
+    setShowNthWeekPicker(false);
+  };
+
+  const confirmWeekday = () => {
+    setRepeatNthWeekday(tempWeekday);
+    setShowWeekdayPicker(false);
+  };
+
+  const unitLabels: Record<'minute' | 'hour' | 'day' | 'week' | 'year', string> = {
+    minute: '分',
+    hour: '時間',
+    day: '日',
+    week: '週',
+    year: '年',
   };
 
   useEffect(() => {
@@ -321,6 +383,7 @@ export default function CreateScreen({ route, navigation }: any) {
             onChangeText={v => updateTimer(idx, 'label', v)}
             placeholder="タイマー名"
             style={styles.timerNameInput}
+            onFocus={e => scrollToInput(e.nativeEvent.target)}
           />
           <View style={styles.timeRow}>
             <TextInput
@@ -329,6 +392,7 @@ export default function CreateScreen({ route, navigation }: any) {
               placeholder="分"
               keyboardType="number-pad"
               style={[styles.timerInput, { marginRight: 4 }]}
+              onFocus={e => scrollToInput(e.nativeEvent.target)}
             />
             <Text style={{ alignSelf: 'center' }}>:</Text>
             <TextInput
@@ -337,6 +401,7 @@ export default function CreateScreen({ route, navigation }: any) {
               placeholder="秒"
               keyboardType="number-pad"
               style={[styles.timerInput, { marginLeft: 4 }]}
+              onFocus={e => scrollToInput(e.nativeEvent.target)}
             />
           </View>
           <View style={styles.notifyRow}>
@@ -364,6 +429,7 @@ export default function CreateScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         contentContainerStyle={{
           paddingHorizontal: 24,
@@ -398,6 +464,7 @@ export default function CreateScreen({ route, navigation }: any) {
             onChangeText={setSetName}
             placeholder="セット名"
             style={styles.input}
+            onFocus={e => scrollToInput(e.nativeEvent.target)}
           />
           <Pressable style={styles.select} onPress={() => setSoundModal(true)}>
             <Text style={styles.notifyLabel}>終了音</Text>
@@ -445,27 +512,23 @@ export default function CreateScreen({ route, navigation }: any) {
                       value={notifyDate}
                       mode="date"
                       display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                      locale="ja"
                       onChange={(e, d) => {
                         setShowDatePicker(false);
                         if (d) setNotifyDate(d);
                       }}
                     />
                   )}
-                  <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
+                  <Pressable
+                    style={styles.select}
+                    onPress={() => {
+                      setTempNotifyTime(notifyTime);
+                      setShowTimePicker(true);
+                    }}
+                  >
                     <Text style={styles.notifyLabel}>時間</Text>
                     <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
                   </Pressable>
-                  {showTimePicker && (
-                    <DateTimePicker
-                      value={notifyTime}
-                      mode="time"
-                      display="spinner"
-                      onChange={(e, d) => {
-                        setShowTimePicker(false);
-                        if (d) setNotifyTime(d);
-                      }}
-                    />
-                  )}
                 </>
               )}
               <View style={styles.notifyRow}>
@@ -501,18 +564,17 @@ export default function CreateScreen({ route, navigation }: any) {
                         value={repeatNum}
                         onChangeText={setRepeatNum}
                         style={[styles.timerInput, { flex: 1 }]}
+                        onFocus={e => scrollToInput(e.nativeEvent.target)}
                       />
-                      <Picker
-                        selectedValue={repeatUnit}
-                        onValueChange={itemValue => setRepeatUnit(itemValue)}
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempRepeatUnit(repeatUnit);
+                          setShowRepeatUnitPicker(true);
+                        }}
                       >
-                        <Picker.Item label="分" value="minute" />
-                        <Picker.Item label="時間" value="hour" />
-                        <Picker.Item label="日" value="day" />
-                        <Picker.Item label="週" value="week" />
-                        <Picker.Item label="年" value="year" />
-                      </Picker>
+                        <Text>{unitLabels[repeatUnit]}</Text>
+                      </Pressable>
                     </View>
                   )}
                   {repeatMode === 'weekday' && (
@@ -555,24 +617,27 @@ export default function CreateScreen({ route, navigation }: any) {
                   )}
                   {repeatMode === 'monthly' && (
                     <View style={styles.timeRow}>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1 }]}
-                        selectedValue={repeatNthWeek}
-                        onValueChange={v => setRepeatNthWeek(Number(v))}
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempNthWeek(repeatNthWeek);
+                          setShowNthWeekPicker(true);
+                        }}
                       >
-                        {[1, 2, 3, 4].map(n => (
-                          <Picker.Item key={n} label={`第${n}`} value={n} />
-                        ))}
-                      </Picker>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
-                        selectedValue={repeatNthWeekday}
-                        onValueChange={v => setRepeatNthWeekday(Number(v))}
+                        <Text>{`第${repeatNthWeek}`}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempWeekday(repeatNthWeekday);
+                          setShowWeekdayPicker(true);
+                        }}
                       >
-                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
-                          <Picker.Item key={i} label={`${d}曜`} value={i} />
-                        ))}
-                      </Picker>
+                        <Text>
+                          {['日', '月', '火', '水', '木', '金', '土'][repeatNthWeekday]}
+                          曜
+                        </Text>
+                      </Pressable>
                     </View>
                   )}
                 </>
@@ -620,6 +685,7 @@ export default function CreateScreen({ route, navigation }: any) {
             onChangeText={setSetName}
             placeholder="セット名"
             style={styles.input}
+            onFocus={e => scrollToInput(e.nativeEvent.target)}
           />
           <Pressable style={styles.select} onPress={() => setSoundModal(true)}>
             <Text style={styles.notifyLabel}>終了音</Text>
@@ -667,27 +733,23 @@ export default function CreateScreen({ route, navigation }: any) {
                       value={notifyDate}
                       mode="date"
                       display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                      locale="ja"
                       onChange={(e, d) => {
                         setShowDatePicker(false);
                         if (d) setNotifyDate(d);
                       }}
                     />
                   )}
-                  <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
+                  <Pressable
+                    style={styles.select}
+                    onPress={() => {
+                      setTempNotifyTime(notifyTime);
+                      setShowTimePicker(true);
+                    }}
+                  >
                     <Text style={styles.notifyLabel}>時間</Text>
                     <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
                   </Pressable>
-                  {showTimePicker && (
-                    <DateTimePicker
-                      value={notifyTime}
-                      mode="time"
-                      display="spinner"
-                      onChange={(e, d) => {
-                        setShowTimePicker(false);
-                        if (d) setNotifyTime(d);
-                      }}
-                    />
-                  )}
                 </>
               )}
               <View style={styles.notifyRow}>
@@ -723,18 +785,17 @@ export default function CreateScreen({ route, navigation }: any) {
                         value={repeatNum}
                         onChangeText={setRepeatNum}
                         style={[styles.timerInput, { flex: 1 }]}
+                        onFocus={e => scrollToInput(e.nativeEvent.target)}
                       />
-                      <Picker
-                        selectedValue={repeatUnit}
-                        onValueChange={itemValue => setRepeatUnit(itemValue)}
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempRepeatUnit(repeatUnit);
+                          setShowRepeatUnitPicker(true);
+                        }}
                       >
-                        <Picker.Item label="分" value="minute" />
-                        <Picker.Item label="時間" value="hour" />
-                        <Picker.Item label="日" value="day" />
-                        <Picker.Item label="週" value="week" />
-                        <Picker.Item label="年" value="year" />
-                      </Picker>
+                        <Text>{unitLabels[repeatUnit]}</Text>
+                      </Pressable>
                     </View>
                   )}
                   {repeatMode === 'weekday' && (
@@ -777,24 +838,30 @@ export default function CreateScreen({ route, navigation }: any) {
                   )}
                   {repeatMode === 'monthly' && (
                     <View style={styles.timeRow}>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1 }]}
-                        selectedValue={repeatNthWeek}
-                        onValueChange={v => setRepeatNthWeek(Number(v))}
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempNthWeek(repeatNthWeek);
+                          setShowNthWeekPicker(true);
+                        }}
                       >
-                        {[1, 2, 3, 4].map(n => (
-                          <Picker.Item key={n} label={`第${n}`} value={n} />
-                        ))}
-                      </Picker>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
-                        selectedValue={repeatNthWeekday}
-                        onValueChange={v => setRepeatNthWeekday(Number(v))}
+                        <Text>{`第${repeatNthWeek}`}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.timerInput,
+                          { flex: 1, marginLeft: 4, justifyContent: 'center' },
+                        ]}
+                        onPress={() => {
+                          setTempWeekday(repeatNthWeekday);
+                          setShowWeekdayPicker(true);
+                        }}
                       >
-                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
-                          <Picker.Item key={i} label={`${d}曜`} value={i} />
-                        ))}
-                      </Picker>
+                        <Text>
+                          {['日', '月', '火', '水', '木', '金', '土'][repeatNthWeekday]}
+                          曜
+                        </Text>
+                      </Pressable>
                     </View>
                   )}
                 </>
@@ -812,6 +879,78 @@ export default function CreateScreen({ route, navigation }: any) {
         </View>
       )}
       </ScrollView>
+      <Modal visible={showTimePicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={confirmTimePicker}>
+          <Pressable style={styles.pickerContainer} onPress={() => {}}>
+            <DateTimePicker
+              value={tempNotifyTime}
+              mode="time"
+              display="spinner"
+              locale="ja"
+              onChange={(e, d) => d && setTempNotifyTime(d)}
+            />
+            <Pressable style={styles.doneButton} onPress={confirmTimePicker}>
+              <Text style={styles.doneButtonText}>完了</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={showRepeatUnitPicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={confirmRepeatUnit}>
+          <Pressable style={styles.pickerContainer} onPress={() => {}}>
+            <Picker
+              selectedValue={tempRepeatUnit}
+              onValueChange={itemValue => setTempRepeatUnit(itemValue)}
+              style={{ width: '100%' }}
+            >
+              <Picker.Item label="分" value="minute" />
+              <Picker.Item label="時間" value="hour" />
+              <Picker.Item label="日" value="day" />
+              <Picker.Item label="週" value="week" />
+              <Picker.Item label="年" value="year" />
+            </Picker>
+            <Pressable style={styles.doneButton} onPress={confirmRepeatUnit}>
+              <Text style={styles.doneButtonText}>完了</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={showNthWeekPicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={confirmNthWeek}>
+          <Pressable style={styles.pickerContainer} onPress={() => {}}>
+            <Picker
+              selectedValue={tempNthWeek}
+              onValueChange={itemValue => setTempNthWeek(Number(itemValue))}
+              style={{ width: '100%' }}
+            >
+              {[1, 2, 3, 4].map(n => (
+                <Picker.Item key={n} label={`第${n}`} value={n} />
+              ))}
+            </Picker>
+            <Pressable style={styles.doneButton} onPress={confirmNthWeek}>
+              <Text style={styles.doneButtonText}>完了</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={showWeekdayPicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={confirmWeekday}>
+          <Pressable style={styles.pickerContainer} onPress={() => {}}>
+            <Picker
+              selectedValue={tempWeekday}
+              onValueChange={itemValue => setTempWeekday(Number(itemValue))}
+              style={{ width: '100%' }}
+            >
+              {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                <Picker.Item key={i} label={`${d}曜`} value={i} />
+              ))}
+            </Picker>
+            <Pressable style={styles.doneButton} onPress={confirmWeekday}>
+              <Text style={styles.doneButtonText}>完了</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
       <Modal visible={soundModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -946,6 +1085,14 @@ const styles = StyleSheet.create({
     padding: 16,
     width: '80%',
   },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    width: 320,
+  },
+  doneButton: { marginTop: 8, alignSelf: 'flex-end' },
+  doneButtonText: { color: Colors.primary, fontWeight: '700' },
   modalItem: { paddingVertical: 12 },
   modalItemText: { color: Colors.text, fontWeight: '700', textAlign: 'left' },
 });

@@ -5,6 +5,7 @@ declare module '@react-native-community/datetimepicker' {
     mode?: 'date' | 'time';
     display?: 'default' | 'spinner' | 'calendar' | 'inline';
     onChange: (event: any, date?: Date) => void;
+    locale?: string;
   }
   export default class DateTimePicker extends React.Component<DateTimePickerProps> {}
 }
