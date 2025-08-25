@@ -437,25 +437,25 @@ export default function HomeScreen() {
     const currentIdx = indexRef.current;
     const currentTimer = selectedSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= selectedSet.timers.length;
-    const notificationsOn =
-      state.settings.enableNotifications && selectedSet.notifications?.enabled;
 
     let delay = 0;
-    if (currentTimer?.notify !== false && !isLast) {
-      try {
-        await notifySoundRef.current?.replayAsync();
-        const status = await notifySoundRef.current?.getStatusAsync();
-        if (status && status.isLoaded) {
-          delay = status.durationMillis ?? 0;
-        }
-      } catch {}
+    if (currentTimer?.notify !== false) {
+      if (!isLast) {
+        try {
+          await notifySoundRef.current?.replayAsync();
+          const status = await notifySoundRef.current?.getStatusAsync();
+          if (status && status.isLoaded) {
+            delay = status.durationMillis ?? 0;
+          }
+        } catch {}
+      } else {
+        soundRef.current?.replayAsync().catch(() => {});
+      }
+    } else if (isLast) {
+      soundRef.current?.replayAsync().catch(() => {});
     }
 
     if (historyRef.current.id !== runId || !runningRef.current) return;
-
-    if (notificationsOn && (currentTimer?.notify !== false || isLast)) {
-      soundRef.current?.replayAsync().catch(() => {});
-    }
 
     const duration = getDuration(currentTimer);
     const newRun = runCount + 1;

@@ -102,7 +102,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
         content: {
           title: 'タイマー終了',
           body: `${timer?.label ?? 'タイマー'} が終了しました`,
-          sound: withSound,
+          sound: withSound ? true : undefined,
         },
         trigger: {
           seconds: sec,
