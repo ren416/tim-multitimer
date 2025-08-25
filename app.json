@@ -30,7 +30,7 @@
       "expo-notifications",
       "expo-font"
     ],
-    "useNextNotificationsApi": true,,
+    "useNextNotificationsApi": true,
     "notification": {
       "icon": "./assets/notification-icon.png",
       "color": "#7EC8E3"
