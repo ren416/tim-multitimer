@@ -62,6 +62,10 @@ export default function CreateScreen({ route, navigation }: any) {
   const [tempNotifyTime, setTempNotifyTime] = useState<Date>(new Date());
   const [showRepeatUnitPicker, setShowRepeatUnitPicker] = useState(false);
   const [tempRepeatUnit, setTempRepeatUnit] = useState<'minute' | 'hour' | 'day' | 'week' | 'year'>('day');
+  const [showNthWeekPicker, setShowNthWeekPicker] = useState(false);
+  const [tempNthWeek, setTempNthWeek] = useState(1);
+  const [showWeekdayPicker, setShowWeekdayPicker] = useState(false);
+  const [tempWeekday, setTempWeekday] = useState(0);
 
   const reset = () => {
     setStage('choose');
@@ -78,6 +82,10 @@ export default function CreateScreen({ route, navigation }: any) {
     setRepeatUnit('day');
     setTempRepeatUnit('day');
     setShowRepeatUnitPicker(false);
+    setShowNthWeekPicker(false);
+    setTempNthWeek(1);
+    setShowWeekdayPicker(false);
+    setTempWeekday(0);
     setRepeatWeekInterval('every');
     setRepeatWeekdays([]);
     setRepeatNthWeek(1);
@@ -102,7 +110,8 @@ export default function CreateScreen({ route, navigation }: any) {
       () => {},
       (_x, y, _w, h) => {
         const screenHeight = Dimensions.get('window').height;
-        const offset = y + h / 2 - screenHeight / 2;
+        const desiredCenter = screenHeight / 2 - 60;
+        const offset = y + h / 2 - desiredCenter;
         scrollRef.current?.scrollTo({ y: offset > 0 ? offset : 0, animated: true });
       },
     );
@@ -116,6 +125,16 @@ export default function CreateScreen({ route, navigation }: any) {
   const confirmRepeatUnit = () => {
     setRepeatUnit(tempRepeatUnit);
     setShowRepeatUnitPicker(false);
+  };
+
+  const confirmNthWeek = () => {
+    setRepeatNthWeek(tempNthWeek);
+    setShowNthWeekPicker(false);
+  };
+
+  const confirmWeekday = () => {
+    setRepeatNthWeekday(tempWeekday);
+    setShowWeekdayPicker(false);
   };
 
   const unitLabels: Record<'minute' | 'hour' | 'day' | 'week' | 'year', string> = {
@@ -598,24 +617,27 @@ export default function CreateScreen({ route, navigation }: any) {
                   )}
                   {repeatMode === 'monthly' && (
                     <View style={styles.timeRow}>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1 }]}
-                        selectedValue={repeatNthWeek}
-                        onValueChange={v => setRepeatNthWeek(Number(v))}
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempNthWeek(repeatNthWeek);
+                          setShowNthWeekPicker(true);
+                        }}
                       >
-                        {[1, 2, 3, 4].map(n => (
-                          <Picker.Item key={n} label={`第${n}`} value={n} />
-                        ))}
-                      </Picker>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
-                        selectedValue={repeatNthWeekday}
-                        onValueChange={v => setRepeatNthWeekday(Number(v))}
+                        <Text>{`第${repeatNthWeek}`}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempWeekday(repeatNthWeekday);
+                          setShowWeekdayPicker(true);
+                        }}
                       >
-                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
-                          <Picker.Item key={i} label={`${d}曜`} value={i} />
-                        ))}
-                      </Picker>
+                        <Text>
+                          {['日', '月', '火', '水', '木', '金', '土'][repeatNthWeekday]}
+                          曜
+                        </Text>
+                      </Pressable>
                     </View>
                   )}
                 </>
@@ -816,24 +838,30 @@ export default function CreateScreen({ route, navigation }: any) {
                   )}
                   {repeatMode === 'monthly' && (
                     <View style={styles.timeRow}>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1 }]}
-                        selectedValue={repeatNthWeek}
-                        onValueChange={v => setRepeatNthWeek(Number(v))}
+                      <Pressable
+                        style={[styles.timerInput, { flex: 1, justifyContent: 'center' }]}
+                        onPress={() => {
+                          setTempNthWeek(repeatNthWeek);
+                          setShowNthWeekPicker(true);
+                        }}
                       >
-                        {[1, 2, 3, 4].map(n => (
-                          <Picker.Item key={n} label={`第${n}`} value={n} />
-                        ))}
-                      </Picker>
-                      <Picker
-                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
-                        selectedValue={repeatNthWeekday}
-                        onValueChange={v => setRepeatNthWeekday(Number(v))}
+                        <Text>{`第${repeatNthWeek}`}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.timerInput,
+                          { flex: 1, marginLeft: 4, justifyContent: 'center' },
+                        ]}
+                        onPress={() => {
+                          setTempWeekday(repeatNthWeekday);
+                          setShowWeekdayPicker(true);
+                        }}
                       >
-                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
-                          <Picker.Item key={i} label={`${d}曜`} value={i} />
-                        ))}
-                      </Picker>
+                        <Text>
+                          {['日', '月', '火', '水', '木', '金', '土'][repeatNthWeekday]}
+                          曜
+                        </Text>
+                      </Pressable>
                     </View>
                   )}
                 </>
@@ -873,6 +901,7 @@ export default function CreateScreen({ route, navigation }: any) {
             <Picker
               selectedValue={tempRepeatUnit}
               onValueChange={itemValue => setTempRepeatUnit(itemValue)}
+              style={{ width: '100%' }}
             >
               <Picker.Item label="分" value="minute" />
               <Picker.Item label="時間" value="hour" />
@@ -881,6 +910,42 @@ export default function CreateScreen({ route, navigation }: any) {
               <Picker.Item label="年" value="year" />
             </Picker>
             <Pressable style={styles.doneButton} onPress={confirmRepeatUnit}>
+              <Text style={styles.doneButtonText}>完了</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={showNthWeekPicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={confirmNthWeek}>
+          <Pressable style={styles.pickerContainer} onPress={() => {}}>
+            <Picker
+              selectedValue={tempNthWeek}
+              onValueChange={itemValue => setTempNthWeek(Number(itemValue))}
+              style={{ width: '100%' }}
+            >
+              {[1, 2, 3, 4].map(n => (
+                <Picker.Item key={n} label={`第${n}`} value={n} />
+              ))}
+            </Picker>
+            <Pressable style={styles.doneButton} onPress={confirmNthWeek}>
+              <Text style={styles.doneButtonText}>完了</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal visible={showWeekdayPicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={confirmWeekday}>
+          <Pressable style={styles.pickerContainer} onPress={() => {}}>
+            <Picker
+              selectedValue={tempWeekday}
+              onValueChange={itemValue => setTempWeekday(Number(itemValue))}
+              style={{ width: '100%' }}
+            >
+              {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                <Picker.Item key={i} label={`${d}曜`} value={i} />
+              ))}
+            </Picker>
+            <Pressable style={styles.doneButton} onPress={confirmWeekday}>
               <Text style={styles.doneButtonText}>完了</Text>
             </Pressable>
           </Pressable>
@@ -1024,6 +1089,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
+    width: 320,
   },
   doneButton: { marginTop: 8, alignSelf: 'flex-end' },
   doneButtonText: { color: Colors.primary, fontWeight: '700' },
