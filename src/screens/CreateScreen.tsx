@@ -18,6 +18,11 @@ import { useTimerState } from '../context/TimerContext';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
 import { SOUND_OPTIONS } from '../constants/sounds';
+import { scheduleTimerSetNotification, cancelTimerSetNotification } from '../utils/notifications';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
+import dayjs from 'dayjs';
+import { NotificationConfig } from '../context/TimerContext';
 
 type Stage =
   | 'choose'
@@ -34,8 +39,18 @@ export default function CreateScreen({ route, navigation }: any) {
   const [stage, setStage] = useState<Stage>('choose');
   const [setName, setSetName] = useState('');
   const [notify, setNotify] = useState(false);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [notifyDate, setNotifyDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [notifyTime, setNotifyTime] = useState<Date>(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'interval' | 'weekday' | 'monthly'>('interval');
+  const [repeatNum, setRepeatNum] = useState('1');
+  const [repeatUnit, setRepeatUnit] = useState<'minute' | 'hour' | 'day' | 'week' | 'year'>('day');
+  const [repeatWeekInterval, setRepeatWeekInterval] = useState<'every' | 'biweekly'>('every');
+  const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([]);
+  const [repeatNthWeek, setRepeatNthWeek] = useState(1);
+  const [repeatNthWeekday, setRepeatNthWeekday] = useState(0);
   const [selectedId, setSelectedId] = useState('');
   const [timers, setTimers] = useState<TimerInput[]>([]);
   const [sound, setSound] = useState('normal');
@@ -45,8 +60,18 @@ export default function CreateScreen({ route, navigation }: any) {
     setStage('choose');
     setSetName('');
     setNotify(false);
-    setStartTime('');
-    setEndTime('');
+    setNotifyDate(new Date());
+    setNotifyTime(new Date());
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    setRepeatEnabled(false);
+    setRepeatMode('interval');
+    setRepeatNum('1');
+    setRepeatUnit('day');
+    setRepeatWeekInterval('every');
+    setRepeatWeekdays([]);
+    setRepeatNthWeek(1);
+    setRepeatNthWeekday(0);
     setSelectedId('');
     setTimers([]);
     setSound('normal');
@@ -109,6 +134,39 @@ export default function CreateScreen({ route, navigation }: any) {
     setSelectedId(id);
     setSetName(set.name);
     setSound(set.sound || 'normal');
+    if (set.notifications?.enabled) {
+      setNotify(true);
+      if (set.notifications.date) {
+        setNotifyDate(new Date(set.notifications.date));
+      }
+      if (set.notifications.time) {
+        const [h, m] = set.notifications.time.split(':');
+        const dt = dayjs().hour(Number(h)).minute(Number(m)).second(0).toDate();
+        setNotifyTime(dt);
+      }
+      if (set.notifications.repeat) {
+        setRepeatEnabled(true);
+        const rep = set.notifications.repeat;
+        if (rep.mode === 'interval') {
+          setRepeatMode('interval');
+          setRepeatNum(String(rep.every));
+          setRepeatUnit(rep.unit);
+        } else if (rep.mode === 'weekday') {
+          setRepeatMode('weekday');
+          setRepeatWeekInterval(rep.intervalWeeks === 2 ? 'biweekly' : 'every');
+          setRepeatWeekdays(rep.weekdays);
+        } else if (rep.mode === 'monthly') {
+          setRepeatMode('monthly');
+          setRepeatNthWeek(rep.nthWeek);
+          setRepeatNthWeekday(rep.weekday);
+        }
+      } else {
+        setRepeatEnabled(false);
+      }
+    } else {
+      setNotify(false);
+      setRepeatEnabled(false);
+    }
     setTimers(
       set.timers.map(t => ({
         id: t.id,
@@ -134,7 +192,7 @@ export default function CreateScreen({ route, navigation }: any) {
   const addTimerRow = () =>
     setTimers(prev => [...prev, { label: '', min: '', sec: '', notify: true }]);
 
-  const saveNew = () => {
+  const saveNew = async () => {
     const parsed = timers
       .map((t, i) => {
         const m = parseInt(t.min || '0', 10);
@@ -153,6 +211,31 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('作成できません', 'タイマーを入力してください。');
       return;
     }
+    let notifIds: string[] | undefined;
+    let notifConfig: NotificationConfig | undefined;
+    if (notify) {
+      notifConfig = {
+        enabled: true,
+        date: dayjs(notifyDate).format('YYYY-MM-DD'),
+        time: dayjs(notifyTime).format('HH:mm'),
+        repeat: repeatEnabled
+          ? repeatMode === 'interval'
+            ? { mode: 'interval', every: Number(repeatNum), unit: repeatUnit }
+            : repeatMode === 'weekday'
+            ? {
+                mode: 'weekday',
+                intervalWeeks: repeatWeekInterval === 'biweekly' ? 2 : 1,
+                weekdays: repeatWeekdays,
+              }
+            : { mode: 'monthly', nthWeek: repeatNthWeek, weekday: repeatNthWeekday }
+          : undefined,
+      };
+      notifIds = await scheduleTimerSetNotification({
+        name: setName,
+        notifications: notifConfig,
+      });
+      notifConfig.ids = notifIds;
+    }
     dispatch({
       type: 'ADD_SET',
       payload: {
@@ -160,7 +243,7 @@ export default function CreateScreen({ route, navigation }: any) {
         description: '',
         timers: parsed as any,
         sound,
-        notifications: notify ? { enabled: true, start: startTime, end: endTime } : { enabled: false },
+        notifications: notify ? notifConfig : { enabled: false },
       },
     });
     Alert.alert('作成しました', '新しいタイマーセットを作成しました。');
@@ -168,7 +251,7 @@ export default function CreateScreen({ route, navigation }: any) {
     navigation.goBack();
   };
 
-  const saveExisting = () => {
+  const saveExisting = async () => {
     const target = state.timerSets.find(s => s.id === selectedId);
     if (!target) return;
     const parsed = timers
@@ -189,7 +272,39 @@ export default function CreateScreen({ route, navigation }: any) {
       Alert.alert('更新できません', 'タイマーを入力してください。');
       return;
     }
-    const updated = { ...target, name: setName, timers: parsed as any, sound };
+    await cancelTimerSetNotification(target.notifications?.ids);
+    let notifIds: string[] | undefined;
+    let notifConfig: NotificationConfig | undefined;
+    if (notify) {
+      notifConfig = {
+        enabled: true,
+        date: dayjs(notifyDate).format('YYYY-MM-DD'),
+        time: dayjs(notifyTime).format('HH:mm'),
+        repeat: repeatEnabled
+          ? repeatMode === 'interval'
+            ? { mode: 'interval', every: Number(repeatNum), unit: repeatUnit }
+            : repeatMode === 'weekday'
+            ? {
+                mode: 'weekday',
+                intervalWeeks: repeatWeekInterval === 'biweekly' ? 2 : 1,
+                weekdays: repeatWeekdays,
+              }
+            : { mode: 'monthly', nthWeek: repeatNthWeek, weekday: repeatNthWeekday }
+          : undefined,
+      };
+      notifIds = await scheduleTimerSetNotification({
+        name: setName,
+        notifications: notifConfig,
+      });
+      notifConfig.ids = notifIds;
+    }
+    const updated = {
+      ...target,
+      name: setName,
+      timers: parsed as any,
+      sound,
+      notifications: notify ? notifConfig : { enabled: false },
+    };
     dispatch({ type: 'UPDATE_SET', payload: updated });
     Alert.alert('更新しました', `${setName} を更新しました。`);
     reset();
@@ -294,18 +409,148 @@ export default function CreateScreen({ route, navigation }: any) {
           </View>
           {notify && (
             <>
-              <TextInput
-                value={startTime}
-                onChangeText={setStartTime}
-                placeholder="開始時刻 (例: 09:00)"
-                style={styles.input}
-              />
-              <TextInput
-                value={endTime}
-                onChangeText={setEndTime}
-                placeholder="終了時刻 (例: 18:00)"
-                style={styles.input}
-              />
+              <Pressable style={styles.select} onPress={() => setShowDatePicker(true)}>
+                <Text style={styles.notifyLabel}>日付</Text>
+                <Text style={styles.selectValue}>{dayjs(notifyDate).format('YYYY-MM-DD')}</Text>
+              </Pressable>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={notifyDate}
+                  mode="date"
+                  display="calendar"
+                  onChange={(e, d) => {
+                    setShowDatePicker(false);
+                    if (d) setNotifyDate(d);
+                  }}
+                />
+              )}
+              <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
+                <Text style={styles.notifyLabel}>時間</Text>
+                <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
+              </Pressable>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={notifyTime}
+                  mode="time"
+                  display="spinner"
+                  onChange={(e, d) => {
+                    setShowTimePicker(false);
+                    if (d) setNotifyTime(d);
+                  }}
+                />
+              )}
+              <View style={styles.notifyRow}>
+                <Text style={styles.notifyLabel}>繰り返し</Text>
+                <Switch value={repeatEnabled} onValueChange={setRepeatEnabled} />
+              </View>
+              {repeatEnabled && (
+                <>
+                  <View style={styles.notifyRow}>
+                    <Pressable
+                      style={[styles.option, repeatMode === 'interval' && styles.optionActive]}
+                      onPress={() => setRepeatMode('interval')}
+                    >
+                      <Text style={styles.notifyLabel}>間隔</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.option, repeatMode === 'weekday' && styles.optionActive]}
+                      onPress={() => setRepeatMode('weekday')}
+                    >
+                      <Text style={styles.notifyLabel}>曜日</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.option, repeatMode === 'monthly' && styles.optionActive]}
+                      onPress={() => setRepeatMode('monthly')}
+                    >
+                      <Text style={styles.notifyLabel}>月</Text>
+                    </Pressable>
+                  </View>
+                  {repeatMode === 'interval' && (
+                    <View style={styles.timeRow}>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1 }]}
+                        selectedValue={repeatNum}
+                        onValueChange={v => setRepeatNum(String(v))}
+                      >
+                        {Array.from({ length: 60 }, (_, i) => i + 1).map(n => (
+                          <Picker.Item key={n} label={`${n}`} value={`${n}`} />
+                        ))}
+                      </Picker>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
+                        selectedValue={repeatUnit}
+                        onValueChange={v => setRepeatUnit(v as any)}
+                      >
+                        <Picker.Item label="分" value="minute" />
+                        <Picker.Item label="時間" value="hour" />
+                        <Picker.Item label="日" value="day" />
+                        <Picker.Item label="週" value="week" />
+                        <Picker.Item label="年" value="year" />
+                      </Picker>
+                    </View>
+                  )}
+                  {repeatMode === 'weekday' && (
+                    <>
+                      <View style={styles.notifyRow}>
+                        <Pressable
+                          style={[styles.option, repeatWeekInterval === 'every' && styles.optionActive]}
+                          onPress={() => setRepeatWeekInterval('every')}
+                        >
+                          <Text style={styles.notifyLabel}>毎週</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.option, repeatWeekInterval === 'biweekly' && styles.optionActive]}
+                          onPress={() => setRepeatWeekInterval('biweekly')}
+                        >
+                          <Text style={styles.notifyLabel}>隔週</Text>
+                        </Pressable>
+                      </View>
+                      <View style={styles.weekdayRow}>
+                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                          <Pressable
+                            key={i}
+                            style={[
+                              styles.weekdayBtn,
+                              repeatWeekdays.includes(i) && styles.weekdayBtnActive,
+                            ]}
+                            onPress={() =>
+                              setRepeatWeekdays(prev =>
+                                prev.includes(i)
+                                  ? prev.filter(p => p !== i)
+                                  : [...prev, i],
+                              )
+                            }
+                          >
+                            <Text style={styles.weekdayText}>{d}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                  {repeatMode === 'monthly' && (
+                    <View style={styles.timeRow}>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1 }]}
+                        selectedValue={repeatNthWeek}
+                        onValueChange={v => setRepeatNthWeek(Number(v))}
+                      >
+                        {[1, 2, 3, 4].map(n => (
+                          <Picker.Item key={n} label={`第${n}`} value={n} />
+                        ))}
+                      </Picker>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
+                        selectedValue={repeatNthWeekday}
+                        onValueChange={v => setRepeatNthWeekday(Number(v))}
+                      >
+                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                          <Picker.Item key={i} label={`${d}曜`} value={i} />
+                        ))}
+                      </Picker>
+                    </View>
+                  )}
+                </>
+              )}
             </>
           )}
           <IconButton
@@ -354,6 +599,156 @@ export default function CreateScreen({ route, navigation }: any) {
             <Text style={styles.notifyLabel}>終了音</Text>
             <Text style={styles.selectValue}>{SOUND_OPTIONS.find(s => s.value === sound)?.label}</Text>
           </Pressable>
+          <View style={styles.notifyRow}>
+            <Text style={styles.notifyLabel}>通知を有効にする</Text>
+            <Switch value={notify} onValueChange={setNotify} />
+          </View>
+          {notify && (
+            <>
+              <Pressable style={styles.select} onPress={() => setShowDatePicker(true)}>
+                <Text style={styles.notifyLabel}>日付</Text>
+                <Text style={styles.selectValue}>{dayjs(notifyDate).format('YYYY-MM-DD')}</Text>
+              </Pressable>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={notifyDate}
+                  mode="date"
+                  display="calendar"
+                  onChange={(e, d) => {
+                    setShowDatePicker(false);
+                    if (d) setNotifyDate(d);
+                  }}
+                />
+              )}
+              <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
+                <Text style={styles.notifyLabel}>時間</Text>
+                <Text style={styles.selectValue}>{dayjs(notifyTime).format('HH:mm')}</Text>
+              </Pressable>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={notifyTime}
+                  mode="time"
+                  display="spinner"
+                  onChange={(e, d) => {
+                    setShowTimePicker(false);
+                    if (d) setNotifyTime(d);
+                  }}
+                />
+              )}
+              <View style={styles.notifyRow}>
+                <Text style={styles.notifyLabel}>繰り返し</Text>
+                <Switch value={repeatEnabled} onValueChange={setRepeatEnabled} />
+              </View>
+              {repeatEnabled && (
+                <>
+                  <View style={styles.notifyRow}>
+                    <Pressable
+                      style={[styles.option, repeatMode === 'interval' && styles.optionActive]}
+                      onPress={() => setRepeatMode('interval')}
+                    >
+                      <Text style={styles.notifyLabel}>間隔</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.option, repeatMode === 'weekday' && styles.optionActive]}
+                      onPress={() => setRepeatMode('weekday')}
+                    >
+                      <Text style={styles.notifyLabel}>曜日</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.option, repeatMode === 'monthly' && styles.optionActive]}
+                      onPress={() => setRepeatMode('monthly')}
+                    >
+                      <Text style={styles.notifyLabel}>月</Text>
+                    </Pressable>
+                  </View>
+                  {repeatMode === 'interval' && (
+                    <View style={styles.timeRow}>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1 }]}
+                        selectedValue={repeatNum}
+                        onValueChange={v => setRepeatNum(String(v))}
+                      >
+                        {Array.from({ length: 60 }, (_, i) => i + 1).map(n => (
+                          <Picker.Item key={n} label={`${n}`} value={`${n}`} />
+                        ))}
+                      </Picker>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
+                        selectedValue={repeatUnit}
+                        onValueChange={v => setRepeatUnit(v as any)}
+                      >
+                        <Picker.Item label="分" value="minute" />
+                        <Picker.Item label="時間" value="hour" />
+                        <Picker.Item label="日" value="day" />
+                        <Picker.Item label="週" value="week" />
+                        <Picker.Item label="年" value="year" />
+                      </Picker>
+                    </View>
+                  )}
+                  {repeatMode === 'weekday' && (
+                    <>
+                      <View style={styles.notifyRow}>
+                        <Pressable
+                          style={[styles.option, repeatWeekInterval === 'every' && styles.optionActive]}
+                          onPress={() => setRepeatWeekInterval('every')}
+                        >
+                          <Text style={styles.notifyLabel}>毎週</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.option, repeatWeekInterval === 'biweekly' && styles.optionActive]}
+                          onPress={() => setRepeatWeekInterval('biweekly')}
+                        >
+                          <Text style={styles.notifyLabel}>隔週</Text>
+                        </Pressable>
+                      </View>
+                      <View style={styles.weekdayRow}>
+                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                          <Pressable
+                            key={i}
+                            style={[
+                              styles.weekdayBtn,
+                              repeatWeekdays.includes(i) && styles.weekdayBtnActive,
+                            ]}
+                            onPress={() =>
+                              setRepeatWeekdays(prev =>
+                                prev.includes(i)
+                                  ? prev.filter(p => p !== i)
+                                  : [...prev, i],
+                              )
+                            }
+                          >
+                            <Text style={styles.weekdayText}>{d}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                  {repeatMode === 'monthly' && (
+                    <View style={styles.timeRow}>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1 }]}
+                        selectedValue={repeatNthWeek}
+                        onValueChange={v => setRepeatNthWeek(Number(v))}
+                      >
+                        {[1, 2, 3, 4].map(n => (
+                          <Picker.Item key={n} label={`第${n}`} value={n} />
+                        ))}
+                      </Picker>
+                      <Picker
+                        style={[styles.timerInput, { flex: 1, marginLeft: 4 }]}
+                        selectedValue={repeatNthWeekday}
+                        onValueChange={v => setRepeatNthWeekday(Number(v))}
+                      >
+                        {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                          <Picker.Item key={i} label={`${d}曜`} value={i} />
+                        ))}
+                      </Picker>
+                    </View>
+                  )}
+                </>
+              )}
+            </>
+          )}
           <Text style={[styles.title, { marginTop: 20 }]}>タイマーを設定</Text>
           {renderTimerRows()}
           <IconButton
@@ -423,6 +818,37 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   selectValue: { color: Colors.text, fontWeight: '700' },
+  option: {
+    flex: 1,
+    padding: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  optionActive: {
+    borderColor: Colors.primary,
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  weekdayBtn: {
+    flex: 1,
+    padding: 6,
+    marginHorizontal: 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  weekdayBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  weekdayText: { color: Colors.text },
   timerBlock: {
     marginTop: 12,
     backgroundColor: '#fff',

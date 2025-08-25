@@ -3,6 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { uuidv4 } from '../utils/uuid';
 import dayjs from 'dayjs';
 
+export type RepeatIntervalUnit = 'minute' | 'hour' | 'day' | 'week' | 'year';
+
+export type NotificationRepeat =
+  | { mode: 'interval'; every: number; unit: RepeatIntervalUnit }
+  | { mode: 'weekday'; weekdays: number[]; intervalWeeks: number }
+  | { mode: 'monthly'; nthWeek: number; weekday: number };
+
+export type NotificationConfig = {
+  enabled: boolean;
+  date?: string; // YYYY-MM-DD
+  time?: string; // HH:mm
+  repeat?: NotificationRepeat;
+  ids?: string[]; // scheduled notification identifiers
+};
+
 export type Timer = {
   id: string;
   label: string;
@@ -17,11 +32,7 @@ export type TimerSet = {
   description?: string;
   timers: Timer[];
   sound?: string; // asset path
-  notifications?: {
-    enabled: boolean;
-    start?: string;
-    end?: string;
-  };
+  notifications?: NotificationConfig;
   createdAt: string;
   updatedAt: string;
 };
