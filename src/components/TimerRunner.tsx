@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Timer, TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
 import { formatHMS } from '../utils/format';
-import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
+import { scheduleEndNotification } from '../utils/notifications';
 
 type Props = {
   timerSet: TimerSet;
@@ -90,29 +90,6 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     soundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
     notifySoundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
-
-  const scheduleEndNotification = async (
-    sec: number,
-    timer?: Timer,
-    withSound: boolean = true,
-  ) => {
-    try {
-      await Notifications.requestPermissionsAsync();
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'タイマー終了',
-          body: `${timer?.label ?? 'タイマー'} が終了しました`,
-          sound: withSound ? true : undefined,
-        },
-        trigger: {
-          seconds: sec,
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        }
-      });
-    } catch(e) {
-      console.warn('Notification schedule failed', e);
-    }
-  };
 
   const start = () => {
     const curr = timerSet.timers[indexRef.current];

@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import dayjs from 'dayjs';
-import { TimerSet, NotificationConfig, RepeatIntervalUnit } from '../context/TimerContext';
+import { Timer, TimerSet, NotificationConfig, RepeatIntervalUnit } from '../context/TimerContext';
 
 const unitSeconds: Record<RepeatIntervalUnit, number> = {
   minute: 60,
@@ -18,6 +18,29 @@ const ensurePermissions = async () => {
   if (permissions.granted) return true;
   const result = await Notifications.requestPermissionsAsync();
   return result.granted;
+};
+
+export const scheduleEndNotification = async (
+  sec: number,
+  timer?: Timer,
+  withSound: boolean = true,
+) => {
+  try {
+    await Notifications.requestPermissionsAsync();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'タイマー終了',
+        body: `${timer?.label ?? 'タイマー'} が終了しました`,
+        sound: withSound ? true : undefined,
+      },
+      trigger: {
+        seconds: sec,
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      }
+    });
+  } catch(e) {
+    console.warn('Notification schedule failed', e);
+  }
 };
 
 export const scheduleTimerSetNotification = async (
