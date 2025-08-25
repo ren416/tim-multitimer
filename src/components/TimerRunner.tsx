@@ -91,14 +91,18 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     notifySoundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
 
-  const scheduleEndNotification = async (sec: number, timer?: Timer) => {
+  const scheduleEndNotification = async (
+    sec: number,
+    timer?: Timer,
+    withSound: boolean = true,
+  ) => {
     try {
       await Notifications.requestPermissionsAsync();
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'タイマー終了',
           body: `${timer?.label ?? 'タイマー'} が終了しました`,
-          sound: true,
+          sound: withSound ? true : undefined,
         },
         trigger: {
           seconds: sec,
@@ -114,6 +118,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     const curr = timerSet.timers[indexRef.current];
     if (!curr) return;
     const duration = getDuration(curr);
+    const isLast = indexRef.current + 1 >= totalCount;
     setRemaining(duration);
     setRunning(true);
     try { soundRef.current?.stopAsync(); } catch {}
@@ -133,7 +138,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       timerSet.notifications?.enabled &&
       curr?.notify !== false
     ) {
-      scheduleEndNotification(duration, curr);
+      scheduleEndNotification(duration, curr, isLast);
     }
   };
 
@@ -156,15 +161,17 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     const currentIdx = indexRef.current;
     const curr = timerSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= totalCount;
-    const notificationsEnabled =
-      state.settings.enableNotifications && timerSet.notifications?.enabled;
     if (curr?.notify !== false) {
       if (!isLast) {
-        try { await notifySoundRef.current?.replayAsync(); } catch {}
-      } else if (notificationsEnabled) {
-        try { await soundRef.current?.replayAsync(); } catch {}
+        try {
+          await notifySoundRef.current?.replayAsync();
+        } catch {}
+      } else {
+        try {
+          await soundRef.current?.replayAsync();
+        } catch {}
       }
-    } else if (isLast && notificationsEnabled) {
+    } else if (isLast) {
       try { await soundRef.current?.replayAsync(); } catch {}
     }
     if (currentIdx + 1 < totalCount) {
