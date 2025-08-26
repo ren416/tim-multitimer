@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   GestureResponderEvent,
+  Platform,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState, Timer } from '../context/TimerContext';
@@ -321,8 +322,16 @@ export default function HomeScreen() {
 
   const handleDigitChange = (text: string) => {
     const digits = text.replace(/[^0-9]/g, '');
-    setQuickDigits(digits.slice(-6));
+    if (digits.length > 6) return;
+    setQuickDigits(digits);
   };
+  const handleQuickKey = (e: any) => {
+    if (e.nativeEvent.key === 'Backspace') {
+      setQuickDigits(d => d.slice(0, -1));
+      e.preventDefault && e.preventDefault();
+    }
+  };
+
 
   const confirmQuick = () => {
     const digits = quickDigits || '0';
@@ -642,13 +651,46 @@ export default function HomeScreen() {
             <Text style={[styles.time, { textAlign: 'center' }]}>
               {formatQuickDisplay(quickDigits)}
             </Text>
-            <TextInput
-              value={quickDigits}
-              onChangeText={handleDigitChange}
-              keyboardType="number-pad"
-              style={styles.hiddenInput}
-              autoFocus
-            />
+              {Platform.OS === 'web' ? (
+                <View style={styles.row}>
+                  <View style={[styles.select, { flex: 1 }]}>
+                    <Text style={styles.selectLabel}>分</Text>
+                    <input
+                      type="number"
+                      value={parseInt(quickDigits.slice(0, -2) || '0', 10)}
+                      onChange={(e: any) => {
+                        const m = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                        const s = quickDigits.slice(-2).padStart(2, '0');
+                        setQuickDigits(`${m}${s}`);
+                      }}
+                      style={{ flex: 1, textAlign: 'right' }}
+                    />
+                  </View>
+                  <View style={[styles.select, { flex: 1 }]}>
+                    <Text style={styles.selectLabel}>秒</Text>
+                    <input
+                      type="number"
+                      value={parseInt(quickDigits.slice(-2) || '0', 10)}
+                      onChange={(e: any) => {
+                        const s = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                        const m = (quickDigits.slice(0, -2) || '').replace(/[^0-9]/g, '').slice(0, 4);
+                        setQuickDigits(`${m}${s.padStart(2, '0')}`);
+                      }}
+                      style={{ flex: 1, textAlign: 'right' }}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <TextInput
+                  value={quickDigits}
+                  onChangeText={handleDigitChange}
+                  onKeyPress={handleQuickKey}
+                  keyboardType="number-pad"
+                  style={styles.hiddenInput}
+                  autoFocus
+                  maxLength={6}
+                />
+              )}
             <Pressable style={styles.select} onPress={() => setSoundSelectVisible(true)}>
               <Text style={styles.selectLabel}>終了音</Text>
               <Text style={styles.selectValue}>{SOUND_OPTIONS.find(s => s.value === quickSound)?.label}</Text>
