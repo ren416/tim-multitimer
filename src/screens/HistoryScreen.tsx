@@ -125,6 +125,8 @@ export default function HistoryScreen() {
   const CHART_PADDING_BOTTOM = 60;
   // Padding on the right side so that the last bar isn't clipped
   const chartPaddingRight = 20;
+  // Extra left padding so the first tick label isn't hidden under the Y axis
+  const FIRST_LABEL_PADDING = 30;
 
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
@@ -212,7 +214,7 @@ export default function HistoryScreen() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator
-                  contentContainerStyle={{ paddingLeft: AXIS_WIDTH + BAR_GAP }}
+                  contentContainerStyle={{ paddingLeft: AXIS_WIDTH + BAR_GAP + FIRST_LABEL_PADDING }}
                   style={{ flex: 1 }}
                   bounces={false}
                   overScrollMode="never"
