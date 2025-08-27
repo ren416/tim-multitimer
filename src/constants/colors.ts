@@ -1,11 +1,12 @@
+// アプリ全体で使用する色を集約した定数定義
 export const Colors = {
-  primary: '#7EC8E3',     // 淡い青
-  primaryDark: '#5AB0D1',
-  background: '#F0FAFF',
-  card: '#FFFFFF',
-  text: '#102A43',
-  subText: '#486581',
-  border: '#D9EAF7',
-  danger: '#F25F5C',
-  success: '#2EC4B6',
+  primary: '#7EC8E3',     // 淡い青。主要なアクセントカラー
+  primaryDark: '#5AB0D1', // primary を少し濃くした色
+  background: '#F0FAFF',  // 画面全体の背景色
+  card: '#FFFFFF',        // カードやボタンなどの基調色
+  text: '#102A43',        // 基本の文字色
+  subText: '#486581',     // サブテキスト用の色
+  border: '#D9EAF7',      // 枠線や区切りに使用
+  danger: '#F25F5C',      // 削除など警告を表す色
+  success: '#2EC4B6',     // 成功を表す緑系の色
 };

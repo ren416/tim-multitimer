@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 
+// 削除済みデータの管理やタイマー表示設定を行う画面
+
 export default function DataManagementScreen() {
   const { state, dispatch } = useTimerState();
   const navigation = useNavigation<any>();
@@ -91,7 +93,14 @@ export default function DataManagementScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 16 },
-  section: { backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 12, marginTop: 16 },
+  section: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 12,
+    marginTop: 16,
+  },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   label: { color: Colors.text, flex: 1 },

@@ -15,6 +15,7 @@ import {
   UIManager,
   findNodeHandle,
 } from 'react-native';
+// タイマーセットの作成や既存セットの編集を行う画面
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';

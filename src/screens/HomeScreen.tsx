@@ -20,6 +20,8 @@ import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
 
+// ホーム画面。選択したタイマーセットの実行や簡易タイマーの操作を提供する。
+
 export default function HomeScreen() {
   const { state, dispatch } = useTimerState();
   const getDuration = (t?: Timer) => {

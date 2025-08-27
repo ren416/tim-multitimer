@@ -26,9 +26,11 @@ import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 dayjs.extend(weekOfYear);
 
+// 実行履歴をグラフや統計情報として表示する画面
+
 type Range = '日' | '週';
 
-// 徐々に白に近づけることで色を薄くする
+// 徐々に白に近づけることで色を薄くするユーティリティ関数
 const lighten = (hex: string, factor: number) => {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);

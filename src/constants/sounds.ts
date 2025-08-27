@@ -1,9 +1,13 @@
+// サウンド関連の定数定義
+// タイマー終了時などに再生する音声ファイルの一覧を提供する。
+
 export type SoundOption = {
-  value: string;
-  label: string;
-  file: any;
+  value: string; // 識別子
+  label: string; // UI に表示するラベル
+  file: any;     // 実際のサウンドファイル
 };
 
+// 設定画面などで選択可能なサウンド一覧
 export const SOUND_OPTIONS: SoundOption[] = [
   { value: 'none', label: 'なし', file: null },
   { value: 'normal', label: 'ノーマル', file: require('../../assets/sounds/normal.mp3') },
@@ -19,12 +23,14 @@ export const SOUND_OPTIONS: SoundOption[] = [
   { value: 'chime', label: 'チャイム', file: require('../../assets/sounds/chime.mp3') },
 ];
 
+// value をキーとしてサウンドファイルへアクセスできるようマップ化
 export const SOUND_FILES: Record<string, any> = SOUND_OPTIONS.reduce(
   (acc, cur) => {
     acc[cur.value] = cur.file;
     return acc;
   },
   {
-    beep: require('../../assets/sounds/beep.wav'),
-  } as Record<string, any>
+    beep: require('../../assets/sounds/beep.wav'), // 区切り通知用の短いビープ音
+  } as Record<string, any>,
 );
+

@@ -9,6 +9,8 @@ import DataManagementScreen from '../screens/DataManagementScreen';
 import { Colors } from '../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
+// 画面下部に表示されるタブナビゲーションの設定
+
 const Tab = createBottomTabNavigator();
 
 export default function RootTabs() {
@@ -21,6 +23,7 @@ export default function RootTabs() {
         tabBarActiveTintColor: '#0B1D2A',
         tabBarInactiveTintColor: Colors.subText,
         tabBarIcon: ({color, size}) => {
+          // タブ名と Ionicons のアイコン名を対応付け
           const map: Record<string, any> = {
             'ホーム': 'home-outline',
             'タイマー一覧': 'list-outline',
@@ -31,6 +34,7 @@ export default function RootTabs() {
         },
       })}
     >
+      {/* 主要なタブ画面の定義 */}
       <Tab.Screen name="ホーム" component={HomeScreen} />
       <Tab.Screen
         name="作成"

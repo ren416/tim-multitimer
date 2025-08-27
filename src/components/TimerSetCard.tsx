@@ -4,6 +4,9 @@ import { TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
 import IconButton from './IconButton';
 
+// タイマーセットの情報をカード形式で表示するコンポーネント。
+// 実行・編集・複製・削除などの操作ボタンを提供する。
+
 type Props = {
   item: TimerSet;
   onRun?: () => void;
@@ -16,9 +19,11 @@ export default function TimerSetCard({ item, onRun, onEdit, onDuplicate, onDelet
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{item.name}</Text>
+      {/* 説明文があれば表示 */}
       {!!item.description && <Text style={styles.desc}>{item.description}</Text>}
       <Text style={styles.sub}>{item.timers.length} 個のタイマー</Text>
       <View style={styles.row}>
+        {/* 各種操作ボタン */}
         <IconButton label="実行" icon="play" onPress={onRun} style={{ flex: 1 }} />
         <IconButton label="編集" icon="create-outline" onPress={onEdit} type="secondary" style={{ flex: 1 }} />
         <IconButton label="複製" icon="copy-outline" onPress={onDuplicate} type="secondary" style={{ flex: 1 }} />
@@ -28,6 +33,7 @@ export default function TimerSetCard({ item, onRun, onEdit, onDuplicate, onDelet
   );
 }
 
+// スタイル定義
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
