@@ -586,7 +586,7 @@ export default function HomeScreen() {
               icon="play"
               onPress={() => start()}
               disabled={running || (!selectedSet && remaining <= 0)}
-              style={{ flex: 1 }}
+              style={styles.controlButton}
             />
             <IconButton
               label={showReset ? 'リセット' : '停止'}
@@ -594,7 +594,7 @@ export default function HomeScreen() {
               onPress={showReset ? reset : stop}
               disabled={!showReset && !running && !soundPlaying}
               type="secondary"
-              style={{ flex: 1 }}
+              style={styles.controlButton}
             />
           </View>
         </View>
@@ -775,6 +775,7 @@ const styles = StyleSheet.create({
   infoText: { marginTop: 8, color: Colors.text },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
+  controlButton: { flex: 1, flexBasis: 0 },
   displayPager: { alignItems: 'center', flex: 1 },
   pageControl: {
     flexDirection: 'row',
