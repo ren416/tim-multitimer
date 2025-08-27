@@ -5,6 +5,8 @@ import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
 import { Ionicons } from '@expo/vector-icons';
 
+// 設定画面。通知関連の設定やデータ管理画面への遷移を提供する。
+
 export default function SettingsScreen({ navigation }: any) {
   const { state, dispatch } = useTimerState();
 

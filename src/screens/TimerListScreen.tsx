@@ -5,6 +5,8 @@ import { useTimerState } from '../context/TimerContext';
 import TimerSetCard from '../components/TimerSetCard';
 import { Ionicons } from '@expo/vector-icons';
 
+// 登録済みのタイマーセット一覧を表示する画面
+
 export default function TimerListScreen({ navigation }: any) {
   const { state, dispatch } = useTimerState();
 

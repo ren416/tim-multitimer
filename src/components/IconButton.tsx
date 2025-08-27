@@ -3,6 +3,9 @@ import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 
+// アイコンとラベルを組み合わせたボタンコンポーネント。
+// 汎用的に利用できるよう、種別やスタイルを指定できる。
+
 type Props = {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -20,11 +23,13 @@ export default function IconButton({
   type = 'primary',
   disabled,
 }: Props) {
+  // ボタンの種類に応じて背景色を切り替える
   const background = {
     primary: Colors.primary,
     secondary: Colors.card,
     danger: Colors.danger,
   }[type];
+  // secondary タイプのみ文字色を通常のテキスト色にする
   const textColor = type === 'secondary' ? Colors.text : '#fff';
   return (
     <Pressable
@@ -32,7 +37,7 @@ export default function IconButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.btn,
-        { backgroundColor: background, opacity: pressed ? 0.8 : 1 },
+        { backgroundColor: background, opacity: pressed ? 0.8 : 1 }, // 押下時に透明度を変更
         type === 'secondary' && {
           borderWidth: 1,
           borderColor: Colors.border,
@@ -43,7 +48,9 @@ export default function IconButton({
         style,
       ]}
     >
+      {/* Ionicons のアイコンを表示 */}
       <Ionicons name={icon} size={20} color={textColor} style={{ marginRight: 6 }} />
+      {/* ボタンのラベル */}
       <Text style={[styles.txt, { color: textColor }]} numberOfLines={1}>
         {label}
       </Text>
@@ -51,6 +58,7 @@ export default function IconButton({
   );
 }
 
+// コンポーネントで使用するスタイル定義
 const styles = StyleSheet.create({
   btn: {
     flexDirection: 'row',
@@ -64,6 +72,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  txt: { fontWeight: '700' },
-  disabled: { opacity: 0.5 },
+  txt: { fontWeight: '700' }, // ボタンラベルを太字にする
+  disabled: { opacity: 0.5 }, // 無効化時は半透明
 });

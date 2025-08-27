@@ -8,6 +8,9 @@ import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
 import { scheduleEndNotification } from '../utils/notifications';
 
+// 複数のタイマーを連続で実行するランナーコンポーネント。
+// カウントダウン処理や音声再生、通知のスケジュールなどを管理する。
+
 type Props = {
   timerSet: TimerSet;
   onFinish?: () => void;
@@ -16,40 +19,44 @@ type Props = {
 
 export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const { state, dispatch } = useTimerState();
-  const [index, setIndex] = useState(0);
-  const indexRef = useRef(0);
+  const [index, setIndex] = useState(0); // 現在実行中のタイマーのインデックス
+  const indexRef = useRef(0);            // setInterval 内から参照するためのインデックスの参照
   const getDuration = (t?: Timer) => {
     const d = Number(t?.durationSec);
     return Number.isFinite(d) ? Math.max(0, d) : 0;
   };
 
+  // 残り時間や実行状態などのステート群
   const [remaining, setRemaining] = useState(() => getDuration(timerSet.timers[0]));
   const [running, setRunning] = useState(false);
   const [startedHistoryId, setStartedHistoryId] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const notifySoundRef = useRef<Audio.Sound | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);      // 終了時に鳴らすサウンド
+  const notifySoundRef = useRef<Audio.Sound | null>(null); // 区切りの通知音
 
-  const totalCount = timerSet.timers.length;
-  const current = timerSet.timers[index];
+  const totalCount = timerSet.timers.length; // タイマーの総数
+  const current = timerSet.timers[index];    // 現在のタイマー
 
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
 
+  // マウント時に実行開始を履歴へ記録
   useEffect(() => {
     if (!startedHistoryId) {
       dispatch({ type: 'LOG_START', payload: { timerSetId: timerSet.id } });
-      setStartedHistoryId('temp'); // just a flag; reducer generates id but we don't need it for now
+      setStartedHistoryId('temp'); // reducer が ID を生成するため、ここでは仮のフラグを設定
     }
   }, []);
 
+  // コンポーネントアンマウント時に interval をクリア
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
+  // サウンドファイルを読み込み、必要なら音量を設定する
   const loadSound = async () => {
     try {
       await soundRef.current?.unloadAsync();
@@ -74,6 +81,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
+  // サウンドを解放し、メモリリークを防ぐ
   const unloadSound = async () => {
     try { await soundRef.current?.unloadAsync(); } catch {}
     try { await notifySoundRef.current?.unloadAsync(); } catch {}
@@ -91,6 +99,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     notifySoundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
 
+  // カウントダウンを開始する処理
   const start = () => {
     const curr = timerSet.timers[indexRef.current];
     if (!curr) return;
@@ -119,11 +128,13 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
+  // カウントダウンを一時停止
   const pause = () => {
     setRunning(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
   };
 
+  // 現在のタイマーを最初の時間にリセット
   const resetCurrent = () => {
     if (!current) return;
     setRemaining(getDuration(current));
@@ -134,6 +145,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     startRef.current = start;
   });
 
+  // 1つのタイマーが終了した際の処理
   const endOne = async () => {
     const currentIdx = indexRef.current;
     const curr = timerSet.timers[currentIdx];
@@ -156,7 +168,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       setIndex(next);
       indexRef.current = next;
       setRemaining(getDuration(timerSet.timers[next]));
-      // auto start next without flashing button
+      // ボタンの点滅を避けるため、次のタイマーを自動開始
       startRef.current();
     } else {
       setRunning(false);
@@ -164,6 +176,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
+  // 現在のタイマーをスキップして次へ進む
   const skip = () => {
     const currentIdx = indexRef.current;
     if (currentIdx + 1 < totalCount) {
@@ -176,6 +189,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
+  // 実行を中止し、サウンドやタイマーを停止
   const cancel = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
@@ -186,10 +200,12 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   return (
     <View style={styles.container}>
+      {/* セット名と現在のタイマー情報 */}
       <Text style={styles.name}>{timerSet.name}</Text>
       <Text style={styles.currentLabel}>{current?.label ?? '—'}</Text>
       <Text style={styles.time}>{formatHMS(remaining)}</Text>
 
+      {/* 操作用のボタン類 */}
       <View style={styles.controls}>
         {!running ? (
           <Pressable onPress={start} style={[styles.btn, styles.primary]}>
@@ -208,11 +224,13 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
         </Pressable>
       </View>
 
+      {/* 進捗を表示 */}
       <Text style={styles.progress}>{index + 1} / {totalCount}</Text>
     </View>
   );
 }
 
+// このコンポーネントで利用するスタイル定義
 const styles = StyleSheet.create({
   container: { alignItems: 'center', padding: 20 },
   name: { fontSize: 20, fontWeight: '700', color: Colors.text },

@@ -2,6 +2,8 @@ import * as Notifications from 'expo-notifications';
 import dayjs from 'dayjs';
 import { Timer, TimerSet, NotificationConfig, RepeatIntervalUnit } from '../context/TimerContext';
 
+// Expo の通知機能を用いてタイマー終了や予約通知をスケジュールするためのヘルパー群
+
 const unitSeconds: Record<RepeatIntervalUnit, number> = {
   minute: 60,
   hour: 3600,
@@ -13,6 +15,7 @@ const unitSeconds: Record<RepeatIntervalUnit, number> = {
 const unitToSeconds = (every: number, unit: string) =>
   (unitSeconds[unit as RepeatIntervalUnit] ?? 60) * every;
 
+// 通知権限を確認し、未許可の場合はリクエストする
 const ensurePermissions = async () => {
   const permissions = await Notifications.getPermissionsAsync();
   if (permissions.granted) return true;
@@ -20,6 +23,7 @@ const ensurePermissions = async () => {
   return result.granted;
 };
 
+// 個別タイマーが終了する際の単発通知を設定
 export const scheduleEndNotification = async (
   sec: number,
   timer?: Timer,
@@ -43,6 +47,7 @@ export const scheduleEndNotification = async (
   }
 };
 
+// タイマーセット全体の開始を通知する予約を設定
 export const scheduleTimerSetNotification = async (
   set: Pick<TimerSet, 'name' | 'notifications'>,
 ): Promise<string[]> => {
@@ -124,6 +129,7 @@ export const scheduleTimerSetNotification = async (
   return ids;
 };
 
+// 予約した通知をキャンセル
 export const cancelTimerSetNotification = async (ids?: string | string[]) => {
   const arr = Array.isArray(ids) ? ids : ids ? [ids] : [];
   for (const id of arr) {

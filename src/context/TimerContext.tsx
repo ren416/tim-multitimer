@@ -3,6 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { uuidv4 } from '../utils/uuid';
 import dayjs from 'dayjs';
 
+// タイマーセットや履歴、設定などアプリ全体の状態を管理するコンテキスト。
+// Reducer と LocalStorage（AsyncStorage）を用いて永続化する。
+
+// 繰り返し通知の単位
 export type RepeatIntervalUnit = 'minute' | 'hour' | 'day' | 'week' | 'year';
 
 export type NotificationRepeat =
@@ -10,14 +14,16 @@ export type NotificationRepeat =
   | { mode: 'weekday'; weekdays: number[]; intervalWeeks: number }
   | { mode: 'monthly'; nthWeek: number; weekday: number };
 
+// 通知設定の情報
 export type NotificationConfig = {
   enabled: boolean;
-  date?: string; // YYYY-MM-DD
-  time?: string; // HH:mm
+  date?: string; // YYYY-MM-DD 形式の日付
+  time?: string; // HH:mm 形式の時刻
   repeat?: NotificationRepeat;
-  ids?: string[]; // scheduled notification identifiers
+  ids?: string[]; // 予約した通知の識別子
 };
 
+// 個々のタイマーを表す型
 export type Timer = {
   id: string;
   label: string;
@@ -26,17 +32,19 @@ export type Timer = {
   notify?: boolean;
 };
 
+// 複数のタイマーをひとまとめにしたセット
 export type TimerSet = {
   id: string;
   name: string;
   description?: string;
   timers: Timer[];
-  sound?: string; // asset path
-  notifications?: NotificationConfig;
+  sound?: string; // 再生するサウンドの種類
+  notifications?: NotificationConfig; // セット全体の通知設定
   createdAt: string;
   updatedAt: string;
 };
 
+// 実行履歴を表すエントリ
 export type HistoryEntry = {
   id: string;
   timerSetId?: string;
@@ -48,13 +56,15 @@ export type HistoryEntry = {
   cancelled?: boolean;
 };
 
+// ユーザー設定項目
 export type Settings = {
-  theme: 'light'|'dark'|'system';
+  theme: 'light'|'dark'|'system'; // テーマ設定
   primaryColor?: string;
   enableNotifications: boolean;
-  notificationVolume: number;
+  notificationVolume: number; // 通知音量
 };
 
+// コンテキスト全体の状態構造
 type State = {
   timerSets: TimerSet[];
   history: HistoryEntry[];
@@ -62,6 +72,7 @@ type State = {
   hiddenTimerSetIds: string[];
 };
 
+// Reducer で扱うアクション定義
 type Action =
   | { type: 'ADD_SET'; payload: Omit<TimerSet,'id'|'createdAt'|'updatedAt'> }
   | { type: 'UPDATE_SET'; payload: TimerSet }
@@ -75,6 +86,7 @@ type Action =
   | { type: 'SET_HIDDEN_SETS'; payload: { ids: string[] } }
   | { type: 'HYDRATE'; payload: Partial<State> };
 
+// 状態の初期値
 const initial: State = {
   timerSets: [],
   history: [],
@@ -86,8 +98,10 @@ const initial: State = {
   hiddenTimerSetIds: [],
 };
 
+// AsyncStorage に保存する際のキー
 const STORAGE_KEY = 'tim.state.v1';
 
+// 状態を更新する reducer 関数
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case 'ADD_SET': {
@@ -194,11 +208,14 @@ const reducer = (state: State, action: Action): State => {
   }
 };
 
+// コンテキストの作成
 const Ctx = createContext<{state: State; dispatch: React.Dispatch<Action>}>({state: initial, dispatch: ()=>{}});
 
+// Provider コンポーネント。アプリ全体に状態を提供する。
 export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [state, dispatch] = useReducer(reducer, initial);
 
+  // マウント時に保存された状態を読み込み、なければサンプルデータを投入
   useEffect(() => {
     (async () => {
       try {
@@ -214,7 +231,7 @@ export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children})
             },
           });
         } else {
-          // Seed example
+          // 初回起動時にサンプルデータを保存
           const example: Omit<TimerSet,'id'|'createdAt'|'updatedAt'> = {
             name: 'ポモドーロ (25-5 x2)',
             description: '25分集中 + 5分休憩を2セット',
@@ -236,6 +253,7 @@ export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children})
     })();
   }, []);
 
+  // 状態が変化するたびに AsyncStorage へ保存
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(()=>{});
   }, [state]);
@@ -243,4 +261,5 @@ export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children})
   return <Ctx.Provider value={{state, dispatch}}>{children}</Ctx.Provider>
 };
 
+// コンテキストを利用するためのカスタムフック
 export const useTimerState = () => useContext(Ctx);
