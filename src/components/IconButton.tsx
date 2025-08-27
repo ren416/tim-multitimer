@@ -33,7 +33,12 @@ export default function IconButton({
       style={({ pressed }) => [
         styles.btn,
         { backgroundColor: background, opacity: pressed ? 0.8 : 1 },
-        type === 'secondary' && { borderWidth: 1, borderColor: Colors.border },
+        type === 'secondary' && {
+          borderWidth: 1,
+          borderColor: Colors.border,
+          paddingHorizontal: 13,
+          paddingVertical: 9,
+        },
         disabled && styles.disabled,
         style,
       ]}
