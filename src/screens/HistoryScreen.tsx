@@ -11,7 +11,14 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
-import { VictoryBar, VictoryChart, VictoryAxis, VictoryPie, VictoryLabel } from 'victory-native';
+import {
+  VictoryBar,
+  VictoryChart,
+  VictoryAxis,
+  VictoryPie,
+  VictoryLabel,
+  VictoryClipContainer,
+} from 'victory-native';
 import Svg, { Line } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -225,6 +232,7 @@ export default function HistoryScreen() {
                     padding={{ top: 10, bottom: CHART_PADDING_BOTTOM, left: 0, right: chartPaddingRight }}
                     domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
                     domain={{ y: [0, yMax] }}
+                    groupComponent={<VictoryClipContainer clipPadding={{ left: FIRST_LABEL_PADDING }} />}
                   >
                     <VictoryAxis
                       style={{
