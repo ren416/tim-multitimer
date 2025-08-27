@@ -11,7 +11,14 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState } from '../context/TimerContext';
-import { VictoryBar, VictoryChart, VictoryAxis, VictoryPie, VictoryLabel } from 'victory-native';
+import {
+  VictoryBar,
+  VictoryChart,
+  VictoryAxis,
+  VictoryPie,
+  VictoryLabel,
+  VictoryClipContainer,
+} from 'victory-native';
 import Svg, { Line } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -121,10 +128,12 @@ export default function HistoryScreen() {
   // the right side of the frame
   const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
   // Dimensions for the chart and axis layout
-  const CHART_HEIGHT = 220;
-  const CHART_PADDING_BOTTOM = 50;
+  const CHART_HEIGHT = 240;
+  const CHART_PADDING_BOTTOM = 60;
   // Padding on the right side so that the last bar isn't clipped
   const chartPaddingRight = 20;
+  // Extra left padding so the first tick label isn't hidden under the Y axis
+  const FIRST_LABEL_PADDING = 30;
 
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
@@ -212,7 +221,7 @@ export default function HistoryScreen() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator
-                  contentContainerStyle={{ paddingLeft: AXIS_WIDTH }}
+                  contentContainerStyle={{ paddingLeft: AXIS_WIDTH + BAR_GAP + FIRST_LABEL_PADDING }}
                   style={{ flex: 1 }}
                   bounces={false}
                   overScrollMode="never"
@@ -223,6 +232,7 @@ export default function HistoryScreen() {
                     padding={{ top: 10, bottom: CHART_PADDING_BOTTOM, left: 0, right: chartPaddingRight }}
                     domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
                     domain={{ y: [0, yMax] }}
+                    groupComponent={<VictoryClipContainer clipPadding={{ left: FIRST_LABEL_PADDING }} />}
                   >
                     <VictoryAxis
                       style={{
