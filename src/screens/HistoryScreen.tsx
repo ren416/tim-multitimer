@@ -121,8 +121,8 @@ export default function HistoryScreen() {
   // the right side of the frame
   const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
   // Dimensions for the chart and axis layout
-  const CHART_HEIGHT = 220;
-  const CHART_PADDING_BOTTOM = 50;
+  const CHART_HEIGHT = 240;
+  const CHART_PADDING_BOTTOM = 60;
   // Padding on the right side so that the last bar isn't clipped
   const chartPaddingRight = 20;
 
@@ -212,7 +212,7 @@ export default function HistoryScreen() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator
-                  contentContainerStyle={{ paddingLeft: AXIS_WIDTH }}
+                  contentContainerStyle={{ paddingLeft: AXIS_WIDTH + BAR_GAP }}
                   style={{ flex: 1 }}
                   bounces={false}
                   overScrollMode="never"
