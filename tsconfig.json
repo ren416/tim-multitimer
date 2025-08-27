@@ -1,24 +1,24 @@
-{
-  "compilerOptions": {
-    "target": "es2017",
-    "lib": [
-      "dom",
-      "es2017"
-    ],
-    "jsx": "react-native",
-    "moduleResolution": "node",
-    "allowJs": true,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "strict": false,
-    "types": [
-      "react",
-      "react-native"
-    ]
-  },
-  "exclude": [
-    "node_modules"
-  ],
-  "extends": "expo/tsconfig.base"
-}
+// {
+//   "compilerOptions": {
+//     "target": "es2017",
+//     "lib": [
+//       "dom",
+//       "es2017"
+//     ],
+//     "jsx": "react-native",
+//     "moduleResolution": "node",
+//     "allowJs": true,
+//     "skipLibCheck": true,
+//     "noEmit": true,
+//     "resolveJsonModule": true,
+//     "strict": false,
+//     "types": [
+//       "react",
+//       "react-native"
+//     ]
+//   },
+//   "exclude": [
+//     "node_modules"
+//   ],
+//   "extends": "expo/tsconfig.base"
+// }
