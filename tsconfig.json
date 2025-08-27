@@ -1,8 +1,10 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "target": "es2017",
-    "lib": ["dom", "es2017"],
+    "lib": [
+      "dom",
+      "es2017"
+    ],
     "jsx": "react-native",
     "moduleResolution": "node",
     "allowJs": true,
@@ -10,7 +12,13 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "strict": false,
-    "typeRoots": ["./types", "./node_modules/@types"]
+    "types": [
+      "react",
+      "react-native"
+    ]
   },
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ],
+  "extends": "expo/tsconfig.base"
 }

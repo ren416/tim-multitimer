@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import React, { PropsWithChildren } from 'react';
+import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import RootTabs from './src/navigation';
 import { TimerProvider } from './src/context/TimerContext';
@@ -20,7 +20,7 @@ const theme = {
   },
 };
 
-function WithKeepAwake({ children }: PropsWithChildren<{}>) {
+function WithKeepAwake({ children }: { children: React.ReactNode }) {
   useKeepAwake();
   return <>{children}</>;
 }
