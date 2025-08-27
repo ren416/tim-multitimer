@@ -56,6 +56,7 @@ export default function HomeScreen() {
   const soundRef = useRef<Audio.Sound | null>(null);
   const notifySoundRef = useRef<Audio.Sound | null>(null);
   const [soundPlaying, setSoundPlaying] = useState(false);
+  const [showReset, setShowReset] = useState(false);
 
   const elapsedRef = useRef(0);
   const lastUpdateRef = useRef(Date.now());
@@ -346,6 +347,7 @@ export default function HomeScreen() {
   };
 
   const start = (initParam?: number | unknown) => {
+    setShowReset(false);
     const init = typeof initParam === 'number' ? initParam : undefined;
     if (nextTimeoutRef.current) {
       clearTimeout(nextTimeoutRef.current);
@@ -416,10 +418,12 @@ export default function HomeScreen() {
     soundRef.current?.stopAsync().catch(() => {});
     notifySoundRef.current?.stopAsync().catch(() => {});
     setSoundPlaying(false);
+    setShowReset(true);
   };
 
   const reset = () => {
     stop();
+    setShowReset(false);
     if (historyId) {
       dispatch({
         type: 'LOG_COMPLETE',
@@ -505,6 +509,7 @@ export default function HomeScreen() {
       }
     } else {
       setRunning(false);
+      setShowReset(true);
       if (historyId && historyRef.current.id === runId) {
         dispatch({
           type: 'LOG_COMPLETE',
@@ -524,6 +529,7 @@ export default function HomeScreen() {
       } else {
         setRunning(false);
         soundRef.current?.replayAsync().catch(() => {});
+        setShowReset(true);
       }
     }
   }, [remaining, running, selectedSet]);
@@ -583,17 +589,10 @@ export default function HomeScreen() {
               style={{ flex: 1 }}
             />
             <IconButton
-              label="停止"
-              icon="pause"
-              onPress={stop}
-              disabled={!running && !soundPlaying}
-              type="secondary"
-              style={{ flex: 1 }}
-            />
-            <IconButton
-              label="リセット"
-              icon="refresh"
-              onPress={reset}
+              label={showReset ? 'リセット' : '停止'}
+              icon={showReset ? 'refresh' : 'pause'}
+              onPress={showReset ? reset : stop}
+              disabled={!showReset && !running && !soundPlaying}
               type="secondary"
               style={{ flex: 1 }}
             />
