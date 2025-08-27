@@ -44,7 +44,9 @@ export default function IconButton({
       ]}
     >
       <Ionicons name={icon} size={20} color={textColor} style={{ marginRight: 6 }} />
-      <Text style={[styles.txt, { color: textColor }]}>{label}</Text>
+      <Text style={[styles.txt, { color: textColor }]} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
