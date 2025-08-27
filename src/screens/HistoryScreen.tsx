@@ -128,12 +128,12 @@ export default function HistoryScreen() {
   // the right side of the frame
   const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
   // Dimensions for the chart and axis layout
-  const CHART_HEIGHT = 240;
-  const CHART_PADDING_BOTTOM = 60;
+  const CHART_HEIGHT = 260;
+  const CHART_PADDING_BOTTOM = 80;
   // Padding on the right side so that the last bar isn't clipped
   const chartPaddingRight = 20;
   // Extra left padding so the first tick label isn't hidden under the Y axis
-  const FIRST_LABEL_PADDING = 30;
+  const FIRST_LABEL_PADDING = 50;
 
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
@@ -217,7 +217,7 @@ export default function HistoryScreen() {
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
             <>
-              <View style={{ height: CHART_HEIGHT, overflow: 'hidden' }}>
+              <View style={{ height: CHART_HEIGHT }}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator
