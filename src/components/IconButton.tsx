@@ -33,13 +33,20 @@ export default function IconButton({
       style={({ pressed }) => [
         styles.btn,
         { backgroundColor: background, opacity: pressed ? 0.8 : 1 },
-        type === 'secondary' && { borderWidth: 1, borderColor: Colors.border },
+        type === 'secondary' && {
+          borderWidth: 1,
+          borderColor: Colors.border,
+          paddingHorizontal: 13,
+          paddingVertical: 9,
+        },
         disabled && styles.disabled,
         style,
       ]}
     >
       <Ionicons name={icon} size={20} color={textColor} style={{ marginRight: 6 }} />
-      <Text style={[styles.txt, { color: textColor }]}>{label}</Text>
+      <Text style={[styles.txt, { color: textColor }]} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

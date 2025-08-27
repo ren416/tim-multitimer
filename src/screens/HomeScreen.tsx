@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   infoText: { marginTop: 8, color: Colors.text },
   time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
   row: { flexDirection: 'row', gap: 12 },
-  controlButton: { flex: 1, flexBasis: 0 },
+  controlButton: { flex: 1, flexBasis: 0, minWidth: 130 },
   displayPager: { alignItems: 'center', flex: 1 },
   pageControl: {
     flexDirection: 'row',
