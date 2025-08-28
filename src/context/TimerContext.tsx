@@ -101,15 +101,18 @@ const initial: State = {
 // AsyncStorage に保存する際のキー
 const STORAGE_KEY = 'tim.state.v1';
 
-// 状態を更新する reducer 関数
+/**
+ * アプリ全体の状態を更新する reducer。
+ * 引数として現在の状態とアクションを受け取り、新しい状態を返す純粋関数。
+ */
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case 'ADD_SET': {
+    case 'ADD_SET': { // 新しいタイマーセットを追加
       const now = dayjs().toISOString();
       const set: TimerSet = { id: uuidv4(), createdAt: now, updatedAt: now, ...action.payload };
       return { ...state, timerSets: [set, ...state.timerSets] };
     }
-    case 'UPDATE_SET': {
+    case 'UPDATE_SET': { // 既存のタイマーセットを更新
       const updated = action.payload;
       updated.updatedAt = dayjs().toISOString();
       return {
@@ -120,7 +123,7 @@ const reducer = (state: State, action: Action): State => {
         ),
       };
     }
-    case 'DELETE_SET': {
+    case 'DELETE_SET': { // タイマーセットのみを削除（履歴は残す）
       const removed = state.timerSets.find(s => s.id === action.payload.id);
       const history = removed
         ? state.history.map(h =>
@@ -136,7 +139,7 @@ const reducer = (state: State, action: Action): State => {
         history,
       };
     }
-    case 'DELETE_SET_WITH_DATA': {
+    case 'DELETE_SET_WITH_DATA': { // タイマーセットと関連する履歴も削除
       const removed = state.timerSets.find(s => s.id === action.payload.id);
       const history = removed
         ? state.history.map(h =>
@@ -152,13 +155,13 @@ const reducer = (state: State, action: Action): State => {
         hiddenTimerSetIds: state.hiddenTimerSetIds.filter(id => id !== action.payload.id),
       };
     }
-    case 'DELETE_HISTORY_BY_SET': {
+    case 'DELETE_HISTORY_BY_SET': { // 特定タイマーセットの履歴だけを削除
       return {
         ...state,
         history: state.history.filter(h => h.timerSetId !== action.payload.id),
       };
     }
-    case 'DUPLICATE_SET': {
+    case 'DUPLICATE_SET': { // タイマーセットを複製
       const src = state.timerSets.find(s => s.id === action.payload.id);
       if (!src) return state;
       const now = dayjs().toISOString();
@@ -171,7 +174,7 @@ const reducer = (state: State, action: Action): State => {
       };
       return { ...state, timerSets: [dup, ...state.timerSets] };
     }
-    case 'LOG_START': {
+    case 'LOG_START': { // タイマーセット実行開始を履歴に記録
       const set = state.timerSets.find(s => s.id === action.payload.timerSetId);
       const entry: HistoryEntry = {
         id: action.payload.id ?? uuidv4(),
@@ -183,7 +186,7 @@ const reducer = (state: State, action: Action): State => {
       };
       return { ...state, history: [entry, ...state.history] };
     }
-    case 'LOG_COMPLETE': {
+    case 'LOG_COMPLETE': { // 実行完了時に履歴を更新
       return {
         ...state,
         history: state.history.map(h => h.id === action.payload.id ? {
@@ -195,13 +198,13 @@ const reducer = (state: State, action: Action): State => {
         } : h)
       };
     }
-    case 'UPDATE_SETTINGS': {
+    case 'UPDATE_SETTINGS': { // 設定値を更新
       return { ...state, settings: { ...state.settings, ...action.payload } };
     }
-    case 'SET_HIDDEN_SETS': {
+    case 'SET_HIDDEN_SETS': { // 一覧で非表示にするセットIDを更新
       return { ...state, hiddenTimerSetIds: action.payload.ids };
     }
-    case 'HYDRATE': {
+    case 'HYDRATE': { // 永続化された状態から復元
       return { ...state, ...action.payload };
     }
     default: return state;
@@ -211,7 +214,11 @@ const reducer = (state: State, action: Action): State => {
 // コンテキストの作成
 const Ctx = createContext<{state: State; dispatch: React.Dispatch<Action>}>({state: initial, dispatch: ()=>{}});
 
-// Provider コンポーネント。アプリ全体に状態を提供する。
+/**
+ * タイマーコンテキストをツリー全体に供給するProviderコンポーネント。
+ * @param children ラップするReact要素
+ * @returns 状態コンテキストを提供する要素
+ */
 export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [state, dispatch] = useReducer(reducer, initial);
 
@@ -261,5 +268,8 @@ export const TimerProvider: React.FC<{children: React.ReactNode}> = ({children})
   return <Ctx.Provider value={{state, dispatch}}>{children}</Ctx.Provider>
 };
 
-// コンテキストを利用するためのカスタムフック
+/**
+ * タイマー状態コンテキストへアクセスするためのカスタムフック。
+ * @returns 現在の状態とdispatch関数
+ */
 export const useTimerState = () => useContext(Ctx);

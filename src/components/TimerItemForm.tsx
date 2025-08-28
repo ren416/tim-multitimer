@@ -18,8 +18,11 @@ export default function TimerItemForm({ value, onChange, onRemove }: Props) {
   const [seconds, setSeconds] = useState(value ? String(value.durationSec % 60) : '0');
   const [note, setNote] = useState(value?.note ?? '');
 
-  // 入力内容が変化した際に親へ値を返すヘルパー
-  const commit = () => {
+  /**
+   * 入力欄の内容をまとめて親コンポーネントへ通知する。
+   * 入力された分・秒から合計秒数を計算し、負値は0として扱う。
+   */
+  const commit = (): void => {
     const m = parseInt(minutes || '0', 10);
     const s = parseInt(seconds || '0', 10);
     onChange({ label, durationSec: Math.max(0, m * 60 + s), note });

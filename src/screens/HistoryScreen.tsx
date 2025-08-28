@@ -30,8 +30,13 @@ dayjs.extend(weekOfYear);
 
 type Range = '日' | '週';
 
-// 徐々に白に近づけることで色を薄くするユーティリティ関数
-const lighten = (hex: string, factor: number) => {
+/**
+ * 渡された16進カラーコードを指定割合だけ白に近づけて明るくする。
+ * @param hex ベースとなるカラーコード（例: "#00FF00"）
+ * @param factor 0〜1の割合。1に近いほど白に近づく。
+ * @returns 明度を調整したカラーコード
+ */
+const lighten = (hex: string, factor: number): string => {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -51,6 +56,7 @@ export default function HistoryScreen() {
   const [month, setMonth] = useState(now.month() + 1);
   const [showPicker, setShowPicker] = useState(false);
 
+  // フィルタ済みの履歴エントリをメモ化して取得
   const visibleHistory = useMemo(
     () =>
       state.history.filter(
@@ -62,6 +68,7 @@ export default function HistoryScreen() {
     [state.history, state.hiddenTimerSetIds],
   );
 
+  // 総時間や平均時間などの統計情報を計算
   const stats = useMemo(() => {
     const entries = visibleHistory;
     const totalSec = entries.reduce((s, h) => s + h.totalDurationSec, 0);
@@ -77,6 +84,7 @@ export default function HistoryScreen() {
     return { totalSec, sessions, avgMin, streak };
   }, [visibleHistory]);
 
+  // グラフ描画のために時間をバケット集計
   const chartInfo = useMemo(() => {
     const history = visibleHistory;
     const buckets: Record<string, number> = {};
@@ -140,6 +148,7 @@ export default function HistoryScreen() {
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
 
+  // タイマーセットごとの使用時間を集計
   const usageInfo = useMemo(() => {
     const entries = visibleHistory.filter(h => {
       const d = dayjs(h.completedAt!);
@@ -164,6 +173,7 @@ export default function HistoryScreen() {
   }, [visibleHistory, state.timerSets, usageRange, year, month]);
 
 
+  // 一定の継続日数に達した場合にお祝いメッセージを表示
   useEffect(() => {
     const milestones = [1, 2, 3, 5, 7, 10, 15, 20, 25, 30];
     const isMilestone =

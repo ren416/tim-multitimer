@@ -20,6 +20,7 @@ export default function DataManagementScreen() {
     });
   }, [navigation]);
 
+  // 履歴から削除されたタイマーセットの候補を抽出
   const deletedSets = useMemo(() => {
     const existing = new Map(state.timerSets.map(s => [s.id, s.name]));
     const map = new Map<string, string>();
@@ -31,7 +32,12 @@ export default function DataManagementScreen() {
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [state.history, state.timerSets]);
 
-  const toggleHidden = (id: string, hidden: boolean) => {
+  /**
+   * 特定のタイマーセットをホーム画面で非表示にするかどうかを切り替える。
+   * @param id 対象タイマーセットのID
+   * @param hidden trueなら非表示リストへ追加する
+   */
+  const toggleHidden = (id: string, hidden: boolean): void => {
     let next = state.hiddenTimerSetIds;
     if (hidden) {
       next = [...next, id];

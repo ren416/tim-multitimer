@@ -11,8 +11,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 // 画面下部に表示されるタブナビゲーションの設定
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator(); // ボトムタブナビゲーターを作成
 
+/**
+ * アプリ全体のルートタブナビゲーションを定義する。
+ * @returns ボトムタブ付きのナビゲーションコンポーネント
+ */
 export default function RootTabs() {
   return (
     <Tab.Navigator

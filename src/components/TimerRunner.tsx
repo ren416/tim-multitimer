@@ -21,7 +21,12 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const { state, dispatch } = useTimerState();
   const [index, setIndex] = useState(0); // 現在実行中のタイマーのインデックス
   const indexRef = useRef(0);            // setInterval 内から参照するためのインデックスの参照
-  const getDuration = (t?: Timer) => {
+  /**
+   * Timer オブジェクトから持続時間（秒）を安全に取得する。
+   * @param t 対象のタイマー。undefined でもよい。
+   * @returns 有効な秒数。無効な値は0として返す。
+   */
+  const getDuration = (t?: Timer): number => {
     const d = Number(t?.durationSec);
     return Number.isFinite(d) ? Math.max(0, d) : 0;
   };
@@ -56,8 +61,11 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     };
   }, []);
 
-  // サウンドファイルを読み込み、必要なら音量を設定する
-  const loadSound = async () => {
+  /**
+   * サウンドファイルを読み込み、通知音量に応じて設定する。
+   * 既存のサウンドは解放してから新たに読み込む。
+   */
+  const loadSound = async (): Promise<void> => {
     try {
       await soundRef.current?.unloadAsync();
       const name = timerSet.sound || 'normal';
@@ -81,8 +89,10 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
-  // サウンドを解放し、メモリリークを防ぐ
-  const unloadSound = async () => {
+  /**
+   * 読み込んだサウンドを解放してメモリ使用量を抑える。
+   */
+  const unloadSound = async (): Promise<void> => {
     try { await soundRef.current?.unloadAsync(); } catch {}
     try { await notifySoundRef.current?.unloadAsync(); } catch {}
   };
@@ -99,7 +109,10 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     notifySoundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
 
-  // カウントダウンを開始する処理
+  /**
+   * 現在のタイマーを開始し1秒ごとのカウントダウンをセットする。
+   * 通知設定が有効なら終了通知も予約する。
+   */
   const start = () => {
     const curr = timerSet.timers[indexRef.current];
     if (!curr) return;
@@ -128,13 +141,17 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
-  // カウントダウンを一時停止
+  /**
+   * カウントダウンを一時停止する。再開時は start() を呼び出す。
+   */
   const pause = () => {
     setRunning(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
   };
 
-  // 現在のタイマーを最初の時間にリセット
+  /**
+   * 現在のタイマーを初期残り時間にリセットする。
+   */
   const resetCurrent = () => {
     if (!current) return;
     setRemaining(getDuration(current));
@@ -145,8 +162,11 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     startRef.current = start;
   });
 
-  // 1つのタイマーが終了した際の処理
-  const endOne = async () => {
+  /**
+   * 1つのタイマーが終了した際の後処理を行う。
+   * 次のタイマーがあれば自動的に開始し、なければ完了コールバックを呼ぶ。
+   */
+  const endOne = async (): Promise<void> => {
     const currentIdx = indexRef.current;
     const curr = timerSet.timers[currentIdx];
     const isLast = currentIdx + 1 >= totalCount;
@@ -176,7 +196,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
-  // 現在のタイマーをスキップして次へ進む
+  /**
+   * 現在のタイマーを強制的に終了し、次のタイマーに進む。
+   */
   const skip = () => {
     const currentIdx = indexRef.current;
     if (currentIdx + 1 < totalCount) {
@@ -189,7 +211,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }
   };
 
-  // 実行を中止し、サウンドやタイマーを停止
+  /**
+   * すべてのカウントダウンとサウンドを停止し、キャンセルコールバックを呼ぶ。
+   */
   const cancel = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);

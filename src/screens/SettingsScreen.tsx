@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 // 設定画面。通知関連の設定やデータ管理画面への遷移を提供する。
 
 export default function SettingsScreen({ navigation }: any) {
-  const { state, dispatch } = useTimerState();
+  const { state, dispatch } = useTimerState(); // 現在の設定値と更新用dispatchを取得
 
   return (
     <ScrollView style={styles.container}>

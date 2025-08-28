@@ -68,6 +68,7 @@ export default function CreateScreen({ route, navigation }: any) {
   const [showWeekdayPicker, setShowWeekdayPicker] = useState(false);
   const [tempWeekday, setTempWeekday] = useState(0);
 
+  // 画面で使用するすべての入力状態を初期化する
   const reset = () => {
     setStage('choose');
     setSetName('');
@@ -97,11 +98,13 @@ export default function CreateScreen({ route, navigation }: any) {
     navigation.setParams({ editId: undefined });
   };
 
+  // 編集を取りやめてタイマー一覧へ戻る
   const handleCancel = () => {
     reset();
     navigation.navigate('タイマー一覧');
   };
 
+  // 指定した入力欄が画面中央付近にくるようスクロールする
   const scrollToInput = (target: number) => {
     const scrollHandle = findNodeHandle(scrollRef.current);
     if (!scrollHandle) return;
@@ -118,21 +121,25 @@ export default function CreateScreen({ route, navigation }: any) {
     );
   };
 
+  // 時刻ピッカーで選択された時間を確定
   const confirmTimePicker = () => {
     setNotifyTime(tempNotifyTime);
     setShowTimePicker(false);
   };
 
+  // 繰り返し間隔の単位を確定
   const confirmRepeatUnit = () => {
     setRepeatUnit(tempRepeatUnit);
     setShowRepeatUnitPicker(false);
   };
 
+  // 月間繰り返しで指定した第n週を確定
   const confirmNthWeek = () => {
     setRepeatNthWeek(tempNthWeek);
     setShowNthWeekPicker(false);
   };
 
+  // 繰り返しの曜日を確定
   const confirmWeekday = () => {
     setRepeatNthWeekday(tempWeekday);
     setShowWeekdayPicker(false);
@@ -146,6 +153,7 @@ export default function CreateScreen({ route, navigation }: any) {
     year: '年',
   };
 
+  // 画面の状態に応じてヘッダータイトルや戻るボタンを設定
   useEffect(() => {
     let title = '作成';
     if (stage === 'newInfo' || stage === 'newTimers') {
@@ -172,16 +180,19 @@ export default function CreateScreen({ route, navigation }: any) {
     });
   }, [stage, setName, selectedId, state.timerSets, navigation, route?.params?.editId]);
 
+  // 新規タイマーセット作成フローを開始
   const toNewInfo = () => {
     reset();
     setStage('newInfo');
   };
 
+  // 既存タイマーセットの編集フローを開始
   const toSelectExisting = () => {
     reset();
     setStage('selectExisting');
   };
 
+  // セット名入力後にタイマー入力段階へ進む
   const startNewTimers = () => {
     if (!setName.trim()) {
       Alert.alert('作成できません', 'セット名を入力してください。');
@@ -191,6 +202,7 @@ export default function CreateScreen({ route, navigation }: any) {
     setStage('newTimers');
   };
 
+  // 編集対象の既存タイマーセットを読み込む
   const selectExisting = (id: string) => {
     const set = state.timerSets.find(s => s.id === id);
     if (!set) return;
@@ -242,6 +254,7 @@ export default function CreateScreen({ route, navigation }: any) {
     setStage('existingTimers');
   };
 
+  // タイマー入力の特定フィールドを更新する
   const updateTimer = (
     index: number,
     field: 'label' | 'min' | 'sec' | 'notify',
@@ -252,9 +265,11 @@ export default function CreateScreen({ route, navigation }: any) {
     );
   };
 
+  // 新しいタイマー入力行を追加
   const addTimerRow = () =>
     setTimers(prev => [...prev, { label: '', min: '', sec: '', notify: true }]);
 
+  // 新規にタイマーセットを保存
   const saveNew = async () => {
     const parsed = timers
       .map((t, i) => {
@@ -314,6 +329,7 @@ export default function CreateScreen({ route, navigation }: any) {
     navigation.goBack();
   };
 
+  // 既存タイマーセットの変更を保存
   const saveExisting = async () => {
     const target = state.timerSets.find(s => s.id === selectedId);
     if (!target) return;
@@ -374,6 +390,7 @@ export default function CreateScreen({ route, navigation }: any) {
     navigation.goBack();
   };
 
+  // 複数のタイマー入力フォームを描画
   const renderTimerRows = () => (
     <View>
       {timers.map((t, idx) => (

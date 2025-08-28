@@ -4,6 +4,7 @@ import { Timer, TimerSet, NotificationConfig, RepeatIntervalUnit } from '../cont
 
 // Expo の通知機能を用いてタイマー終了や予約通知をスケジュールするためのヘルパー群
 
+// 繰り返し設定で使用する単位を秒に変換するための対応表
 const unitSeconds: Record<RepeatIntervalUnit, number> = {
   minute: 60,
   hour: 3600,
@@ -12,23 +13,37 @@ const unitSeconds: Record<RepeatIntervalUnit, number> = {
   year: 365 * 86400,
 };
 
-const unitToSeconds = (every: number, unit: string) =>
+/**
+ * 「n単位ごと」の繰り返し設定を秒へ変換する。
+ * @param every 何単位ごとに繰り返すか
+ * @param unit 単位 (minute/hour/day/week/year)
+ * @returns 指定間隔を秒に換算した値
+ */
+const unitToSeconds = (every: number, unit: string): number =>
   (unitSeconds[unit as RepeatIntervalUnit] ?? 60) * every;
 
-// 通知権限を確認し、未許可の場合はリクエストする
-const ensurePermissions = async () => {
+/**
+ * 通知権限を確認し、未許可であればユーザーにリクエストを表示する。
+ * @returns 権限が付与されていれば true。
+ */
+const ensurePermissions = async (): Promise<boolean> => {
   const permissions = await Notifications.getPermissionsAsync();
   if (permissions.granted) return true;
   const result = await Notifications.requestPermissionsAsync();
   return result.granted;
 };
 
-// 個別タイマーが終了する際の単発通知を設定
+/**
+ * 個別タイマー終了時の通知を設定する。
+ * @param sec 何秒後に通知するか
+ * @param timer 通知本文に使用するタイマー情報
+ * @param withSound trueの場合は通知音を鳴らす
+ */
 export const scheduleEndNotification = async (
   sec: number,
   timer?: Timer,
   withSound: boolean = true,
-) => {
+): Promise<void> => {
   try {
     await Notifications.requestPermissionsAsync();
     await Notifications.scheduleNotificationAsync({
@@ -47,7 +62,11 @@ export const scheduleEndNotification = async (
   }
 };
 
-// タイマーセット全体の開始を通知する予約を設定
+/**
+ * タイマーセットの開始時刻を予約通知する。
+ * @param set タイマーセット名と通知設定
+ * @returns 予約した通知IDの配列
+ */
 export const scheduleTimerSetNotification = async (
   set: Pick<TimerSet, 'name' | 'notifications'>,
 ): Promise<string[]> => {
@@ -129,8 +148,11 @@ export const scheduleTimerSetNotification = async (
   return ids;
 };
 
-// 予約した通知をキャンセル
-export const cancelTimerSetNotification = async (ids?: string | string[]) => {
+/**
+ * 予約済みの通知をキャンセルする。
+ * @param ids キャンセルしたい通知ID（単一または配列）
+ */
+export const cancelTimerSetNotification = async (ids?: string | string[]): Promise<void> => {
   const arr = Array.isArray(ids) ? ids : ids ? [ids] : [];
   for (const id of arr) {
     try {

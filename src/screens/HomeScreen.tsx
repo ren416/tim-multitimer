@@ -24,6 +24,7 @@ import { Audio } from 'expo-av';
 
 export default function HomeScreen() {
   const { state, dispatch } = useTimerState();
+  // Timer オブジェクトから持続時間（秒）を安全に取得する
   const getDuration = (t?: Timer) => {
     const d = Number(t?.durationSec);
     return Number.isFinite(d) ? Math.max(0, d) : 0;
@@ -76,6 +77,7 @@ export default function HomeScreen() {
 
   const modes: Array<'simple' | 'bar' | 'circle'> = ['simple', 'bar', 'circle'];
   const scrollRef = useRef<ScrollView>(null);
+  // ページングされた表示モードのスクロール位置を監視
   const handlePageScroll = (e: any) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
     const idx = Math.round(contentOffset.x / layoutMeasurement.width);
@@ -124,14 +126,24 @@ export default function HomeScreen() {
     });
   }, [selectedSet]);
 
-  const clampProgress = (p: number) => {
+  /**
+   * 進捗率を0〜1の範囲に丸め込むユーティリティ。
+   * @param p 元の進捗率
+   * @returns 0〜1に制限された値
+   */
+  const clampProgress = (p: number): number => {
     if (!isFinite(p)) return 0;
     if (p < 0) return 0;
     if (p > 1) return 1;
     return p;
   };
 
-  const loadSound = async (s: string) => {
+  /**
+   * 指定されたサウンド名に応じて音声ファイルを読み込み、
+   * 再生準備と音量の設定を行う。
+   * @param s ロードするサウンド名
+   */
+  const loadSound = async (s: string): Promise<void> => {
     try {
       await soundRef.current?.unloadAsync();
       await notifySoundRef.current?.unloadAsync();
@@ -195,6 +207,7 @@ export default function HomeScreen() {
     return () => cancelAnimationFrame(raf);
   }, [running, totalDuration]);
 
+  // 表示モードに応じた時間表示を生成
   const renderTimeDisplay = (mode: 'simple' | 'bar' | 'circle') => {
     const timeText = (
       <Text style={styles.time}>
@@ -297,25 +310,30 @@ export default function HomeScreen() {
     };
   }, [dispatch]);
 
+  // タイマーセット選択モーダルを開く
   const handleSelectPress = () => {
     setSelectVisible(true);
   };
 
+  // モーダルで選んだタイマーセットを適用
   const chooseSet = (id: string) => {
     setSelectedId(id);
     setSelectVisible(false);
   };
 
+  // タイマーセット詳細の折りたたみ状態を切り替える
   const toggleExpanded = (id: string) => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // クイックタイマー入力モーダルを表示
   const handleTimePress = () => {
     if (selectedSet) return;
     setQuickDigits('');
     setInputVisible(true);
   };
 
+  // 入力中の値をMM:SS形式の文字列に整形
   const formatQuickDisplay = (d: string) => {
     if (!d) return '00:00';
     const s = d.slice(-2).padStart(2, '0');
@@ -323,11 +341,13 @@ export default function HomeScreen() {
     return `${m}:${s}`;
   };
 
+  // クイックタイマー入力欄の変更を処理
   const handleDigitChange = (text: string) => {
     const digits = text.replace(/[^0-9]/g, '');
     if (digits.length > 6) return;
     setQuickDigits(digits);
   };
+  // バックスペース入力を検知して1桁削除
   const handleQuickKey = (e: any) => {
     if (e.nativeEvent.key === 'Backspace') {
       setQuickDigits(d => d.slice(0, -1));
@@ -336,6 +356,7 @@ export default function HomeScreen() {
   };
 
 
+  // 入力されたクイックタイマー値を確定してカウントダウン準備
   const confirmQuick = () => {
     const digits = quickDigits || '0';
     const m = parseInt(digits.slice(0, -2) || '0', 10);
@@ -348,6 +369,7 @@ export default function HomeScreen() {
     setInputVisible(false);
   };
 
+  // タイマーのカウントダウンを開始
   const start = (initParam?: number | unknown) => {
     setShowReset(false);
     const init = typeof initParam === 'number' ? initParam : undefined;
@@ -406,6 +428,7 @@ export default function HomeScreen() {
     startRef.current = start;
   });
 
+  // カウントダウンを停止
   const stop = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -423,6 +446,7 @@ export default function HomeScreen() {
     setShowReset(true);
   };
 
+  // 実行中のタイマーや入力値をリセット
   const reset = () => {
     stop();
     setShowReset(false);
@@ -450,6 +474,7 @@ export default function HomeScreen() {
     }
   };
 
+  // 現在のタイマーが終了したときの処理
   const endOne = async () => {
     if (!selectedSet) return;
     const runId = historyRef.current.id;
