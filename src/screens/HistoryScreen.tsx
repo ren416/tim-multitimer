@@ -136,6 +136,8 @@ export default function HistoryScreen() {
     // X軸線がチャート中心から縦軸までの距離の2倍になるよう計算し、
     // フレーム右側にもY軸と同じ余白を確保する
     const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
+    // 横スクロール1画面分の幅（Y軸幅 + X軸線の長さ）
+    const CHART_VIEW_WIDTH = AXIS_WIDTH + X_AXIS_LINE_LENGTH;
     // グラフと軸のレイアウト寸法
     const CHART_HEIGHT = 260;
     const CHART_PADDING_BOTTOM = 80;
@@ -228,7 +230,7 @@ export default function HistoryScreen() {
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
             <>
-              <View style={{ height: CHART_HEIGHT }}>
+              <View style={{ height: CHART_HEIGHT, width: CHART_VIEW_WIDTH, alignSelf: 'center' }}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator
