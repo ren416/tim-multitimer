@@ -130,20 +130,19 @@ export default function HistoryScreen() {
 
   const BAR_WIDTH = 10;
   const BAR_GAP = BAR_WIDTH;
-  // Width reserved for the fixed Y axis on the left side of the chart
-  const AXIS_WIDTH = 60;
-  // Length of the x-axis line extending into the chart area
-  // Computed so that the line spans twice the distance from the chart's center
-  // to the vertical axis, effectively leaving the same margin as the Y axis on
-  // the right side of the frame
-  const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
-  // Dimensions for the chart and axis layout
-  const CHART_HEIGHT = 260;
-  const CHART_PADDING_BOTTOM = 80;
-  // Padding on the right side so that the last bar isn't clipped
-  const chartPaddingRight = 20;
-  // Extra left padding so the first tick label isn't hidden under the Y axis
-  const FIRST_LABEL_PADDING = 50;
+    // グラフ左側の固定Y軸に確保する幅
+    const AXIS_WIDTH = 60;
+    // グラフ領域へ延びるX軸線の長さ
+    // X軸線がチャート中心から縦軸までの距離の2倍になるよう計算し、
+    // フレーム右側にもY軸と同じ余白を確保する
+    const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
+    // グラフと軸のレイアウト寸法
+    const CHART_HEIGHT = 260;
+    const CHART_PADDING_BOTTOM = 80;
+    // 最後のバーが切れないよう右側に余白を追加
+    const chartPaddingRight = 20;
+    // 最初の目盛ラベルがY軸の下に隠れないよう左側に余白を追加
+    const FIRST_LABEL_PADDING = 50;
 
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;

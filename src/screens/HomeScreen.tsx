@@ -68,7 +68,7 @@ export default function HomeScreen() {
     [selectedId, state.timerSets]
   );
 
-  // Ensure a timer set is selected once data is loaded
+  // データ読み込み後に必ずタイマーセットが選択されるようにする
   useEffect(() => {
     if (selectedId === null && state.timerSets.length > 0) {
       setSelectedId(state.timerSets[0].id);
@@ -277,7 +277,7 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    // reset when switching sets
+    // セット切り替え時に状態をリセット
     setIndex(0);
     setRemaining(getDuration(selectedSet?.timers[0]));
     setRunning(false);
@@ -387,7 +387,7 @@ export default function HomeScreen() {
       setRunCount(0);
       setTotalSec(0);
       historyRef.current = { id, total: 0, run: 0 };
-      // Ensure a new run always begins from the first timer
+      // 新しい実行は必ず最初のタイマーから開始する
       setIndex(0);
       indexRef.current = 0;
       const first = getDuration(selectedSet.timers[0]);
@@ -398,8 +398,8 @@ export default function HomeScreen() {
     if (rem <= 0) {
       setRemaining(0);
       if (selectedSet) {
-        // Keep the run state active so that delayed transitions (e.g. when
-        // playing a notification sound) can still advance to the next timer.
+        // 通知音の再生などで遅延が発生しても次のタイマーへ進めるように、
+        // 実行状態を保持する
         runningRef.current = true;
         endOne();
       }
