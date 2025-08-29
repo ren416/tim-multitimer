@@ -142,7 +142,7 @@ export default function HistoryScreen() {
     // 最後のバーが切れないよう右側に余白を追加
     const chartPaddingRight = 20;
     // 最初の目盛ラベルがY軸の下に隠れないよう左側に余白を追加
-    const FIRST_LABEL_PADDING = 50;
+    const FIRST_LABEL_PADDING = 40;
 
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
