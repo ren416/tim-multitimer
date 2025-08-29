@@ -109,10 +109,12 @@ export default function HistoryScreen() {
     return { data };
   }, [visibleHistory, range, year, month]);
 
+  // 棒グラフのY軸に使用する単位と最大値を算出
+  // 60秒未満なら「秒」、60分未満なら「分」、それ以外は「時間」に変換する
   const maxSec = chartInfo.data.reduce((m, d) => Math.max(m, d.sec), 0);
-  let unitDiv = 1;
-  let yMax = 60;
-  let yUnit = '秒';
+  let unitDiv = 1; // 秒 → 分/時間 へ変換するための除数
+  let yMax = 60; // Y軸の最大値
+  let yUnit = '秒'; // ラベルに表示する単位
   if (maxSec < 60) {
     yMax = 60;
   } else if (maxSec < 3600) {
@@ -126,26 +128,31 @@ export default function HistoryScreen() {
   }
   const yLabel = `時間 (${yUnit})`;
   const yTick = (t: number) => `${t}${yUnit}`;
+  // VictoryBarに渡すデータ。表示単位に合わせて秒数を換算する
   const chartData = chartInfo.data.map(d => ({ x: d.x, y: d.sec / unitDiv }));
 
+  // ----- 棒グラフのレイアウト定数 -----
+  // 1本の棒の太さ（px）
   const BAR_WIDTH = 10;
+  // 棒同士の間隔。太さと同じ値にして見た目を整える
   const BAR_GAP = BAR_WIDTH;
-    // グラフ左側の固定Y軸に確保する幅
-    const AXIS_WIDTH = 40;
-    // グラフ領域へ延びるX軸線の長さ
-    // X軸線がチャート中心から縦軸までの距離の2倍になるよう計算し、
-    // フレーム右側にもY軸と同じ余白を確保する
-    const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
-    // 横スクロール1画面分の幅（Y軸幅 + X軸線の長さ）
-    const CHART_VIEW_WIDTH = AXIS_WIDTH + X_AXIS_LINE_LENGTH;
-    // グラフと軸のレイアウト寸法
-    const CHART_HEIGHT = 260;
-    const CHART_PADDING_BOTTOM = 80;
-    // 最後のバーが切れないよう右側に余白を追加
-    const chartPaddingRight = 20;
-    // 最初の目盛ラベルがY軸の下に隠れないよう左側に余白を追加
-    const FIRST_LABEL_PADDING = 20;
+  // グラフ左側の固定Y軸に確保する幅
+  const AXIS_WIDTH = 60;
+  // グラフ領域へ延びるX軸線の長さ。
+  // チャート中心が画面中央付近に来るよう画面幅から算出する
+  const X_AXIS_LINE_LENGTH = Math.max(0, width - 80 - AXIS_WIDTH * 2);
+  // 横スクロール1画面分の幅（Y軸幅 + X軸線の長さ）
+  const CHART_VIEW_WIDTH = AXIS_WIDTH + X_AXIS_LINE_LENGTH;
+  // VictoryChartコンポーネントの高さ
+  const CHART_HEIGHT = 260;
+  // X軸ラベル分の余白。これを増減するとラベルの表示位置が変わる
+  const CHART_PADDING_BOTTOM = 80;
+  // 最後のバーが切れないよう右端に追加する余白
+  const chartPaddingRight = 20;
+  // 最初の目盛ラベルがY軸の下に隠れないよう左側に追加する余白
+  const FIRST_LABEL_PADDING = 40;
 
+  // データ数に応じたチャート全体の横幅
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
 
@@ -230,7 +237,9 @@ export default function HistoryScreen() {
             <Text style={{ color: Colors.subText }}>まだ記録がありません。</Text>
           ) : (
             <>
+              {/* チャートと軸をまとめたコンテナ。横幅はスクロール1画面分 */}
               <View style={{ height: CHART_HEIGHT, width: CHART_VIEW_WIDTH, alignSelf: 'center' }}>
+                {/* 棒グラフ領域は横スクロール可能にし、左側にY軸分の余白を確保 */}
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator
@@ -239,14 +248,26 @@ export default function HistoryScreen() {
                   bounces={false}
                   overScrollMode="never"
                 >
+                  {/* 棒グラフ本体。横幅を可変にしてデータ数に応じたスクロールが可能 */}
                   <VictoryChart
                     width={chartWidth}
                     height={CHART_HEIGHT}
+                    // 上下左右の余白設定。右端は棒が切れないように調整
                     padding={{ top: 10, bottom: CHART_PADDING_BOTTOM, left: 0, right: chartPaddingRight }}
+                    // X軸左右に半分ずつ余白を設けて端の棒がくっつかないようにする
                     domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
+                    // Y軸の表示範囲を0〜計算した最大値に固定
                     domain={{ y: [0, yMax] }}
+                    // 左側の固定Y軸領域と重ならないようクリップ領域を調整
                     groupComponent={<VictoryClipContainer clipPadding={{ left: FIRST_LABEL_PADDING }} />}
                   >
+                    {/* X軸。ラベルを斜めに表示して重なりを防ぐ */}
+                    <VictoryAxis
+                      style={{
+                        tickLabels: { angle: -45, fontSize: 10, padding: 25 },
+                      }}
+                    />
+                    {/* 実際の棒データ。xにラベル、yに時間を指定 */}
                     <VictoryBar
                       data={chartData}
                       x="x"
@@ -261,6 +282,7 @@ export default function HistoryScreen() {
                     />
                   </VictoryChart>
                 </ScrollView>
+                {/* 左側に固定表示するY軸 */}
                 <Svg
                   width={AXIS_WIDTH}
                   height={CHART_HEIGHT}
@@ -284,6 +306,7 @@ export default function HistoryScreen() {
                     standalone={false}
                   />
                 </Svg>
+                {/* スクロールに追従しない水平のX軸線 */}
                 <Svg
                   width={X_AXIS_LINE_LENGTH}
                   height={CHART_HEIGHT}
