@@ -29,8 +29,7 @@
     },
     "plugins": [
       "expo-notifications",
-      "expo-font",
-      "react-native-pip-android"
+      "expo-font"
     ],
     "useNextNotificationsApi": true,
     "notification": {
