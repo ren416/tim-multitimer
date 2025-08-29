@@ -131,7 +131,7 @@ export default function HistoryScreen() {
   const BAR_WIDTH = 10;
   const BAR_GAP = BAR_WIDTH;
     // グラフ左側の固定Y軸に確保する幅
-    const AXIS_WIDTH = 60;
+    const AXIS_WIDTH = 40;
     // グラフ領域へ延びるX軸線の長さ
     // X軸線がチャート中心から縦軸までの距離の2倍になるよう計算し、
     // フレーム右側にもY軸と同じ余白を確保する
@@ -144,7 +144,7 @@ export default function HistoryScreen() {
     // 最後のバーが切れないよう右側に余白を追加
     const chartPaddingRight = 20;
     // 最初の目盛ラベルがY軸の下に隠れないよう左側に余白を追加
-    const FIRST_LABEL_PADDING = 40;
+    const FIRST_LABEL_PADDING = 20;
 
   const chartWidth =
     chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
@@ -247,17 +247,17 @@ export default function HistoryScreen() {
                     domain={{ y: [0, yMax] }}
                     groupComponent={<VictoryClipContainer clipPadding={{ left: FIRST_LABEL_PADDING }} />}
                   >
-                    <VictoryAxis
-                      style={{
-                        tickLabels: { angle: -45, fontSize: 10, padding: 25 },
-                      }}
-                    />
                     <VictoryBar
                       data={chartData}
                       x="x"
                       y="y"
                       barWidth={BAR_WIDTH}
                       style={{ data: { fill: Colors.primary } }}
+                    />
+                    <VictoryAxis
+                      style={{
+                        tickLabels: { angle: -45, fontSize: 10, padding: 25 },
+                      }}
                     />
                   </VictoryChart>
                 </ScrollView>
