@@ -152,11 +152,11 @@ export default function HistoryScreen() {
   // 最後のバーが切れないよう右端に追加する余白
   const chartPaddingRight = 25;
   // 最初の目盛ラベルがY軸の下に隠れないよう左側に追加する余白
-  const FIRST_LABEL_PADDING = 40;
+  const FIRST_LABEL_PADDING = 0;
 
   // データ数に応じたチャート全体の横幅
   const chartWidth =
-    chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingRight + BAR_GAP;
+    chartData.length * (BAR_WIDTH + BAR_GAP) + chartPaddingLeft + chartPaddingRight;
 
   // タイマーセットごとの使用時間を集計
   const usageInfo = useMemo(() => {
