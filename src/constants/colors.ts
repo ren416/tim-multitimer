@@ -6,6 +6,7 @@ export const Colors = {
   card: '#FFFFFF',        // カードやボタンなどの基調色
   text: '#102A43',        // 基本の文字色
   subText: '#486581',     // サブテキスト用の色
+  headerText: '#FFFFFF',  // ヘッダーの文字色
   border: '#D9EAF7',      // 枠線や区切りに使用
   danger: '#F25F5C',      // 削除など警告を表す色
   success: '#2EC4B6',     // 成功を表す緑系の色

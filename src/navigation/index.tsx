@@ -21,8 +21,8 @@ export default function RootTabs() {
   return (
     <Tab.Navigator
       screenOptions={({route}) => ({
-        headerStyle: { backgroundColor: Colors.background },
-        headerTitleStyle: { color: Colors.text },
+        headerStyle: { backgroundColor: Colors.primary },
+        headerTitleStyle: { color: Colors.headerText },
         tabBarStyle: { backgroundColor: '#fff', borderTopColor: Colors.border },
         tabBarActiveTintColor: '#0B1D2A',
         tabBarInactiveTintColor: Colors.subText,
