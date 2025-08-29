@@ -1,11 +1,12 @@
 import 'react-native-gesture-handler'; // React Navigationで必要なジェスチャーハンドラーを初期化
 import 'react-native-reanimated'; // アニメーションを有効化するライブラリの読み込み
-import React, { PropsWithChildren } from 'react'; // React本体と子要素型をインポート
+import React, { PropsWithChildren, useEffect } from 'react'; // React本体と子要素型をインポート
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native'; // ナビゲーションコンテナとデフォルトテーマ
 import RootTabs from './src/navigation'; // ルートとなるタブナビゲーション
 import { TimerProvider } from './src/context/TimerContext'; // タイマー機能を提供するコンテキスト
 import { Colors } from './src/constants/colors'; // カラー定数を取得
 import { StatusBar } from 'react-native'; // ステータスバー制御用コンポーネント
+import { Audio } from 'expo-av'; // バックグラウンド再生用のオーディオAPI
 import { useKeepAwake } from 'expo-keep-awake'; // 端末のスリープを防止するフック
 
 // React Navigation のテーマ設定。
@@ -32,6 +33,13 @@ function WithKeepAwake({ children }: PropsWithChildren<{}>) { // スリープ防
 // アプリケーションのルートコンポーネント。
 // タイマーコンテキスト・スリープ防止・ナビゲーションを順にネストしている。
 export default function App() { // アプリケーションのルートコンポーネント
+  // バックグラウンドでもタイマー音が鳴るようにオーディオモードを設定
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      staysActiveInBackground: true,
+      playsInSilentModeIOS: true,
+    }).catch(() => {});
+  }, []);
   return ( // JSXを返す
     <TimerProvider>
       {/* タイマー情報を提供するコンテキストで全体を包む */}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, AppState } from 'react-native';
 import { Timer, TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
 import { formatHMS } from '../utils/format';
@@ -36,6 +36,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const [running, setRunning] = useState(false);
   const [startedHistoryId, setStartedHistoryId] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const endAtRef = useRef<number | null>(null);        // 現在のタイマーの終了予定時刻
+  const remainingRef = useRef(remaining);              // 最新の残り秒数を保持
   const soundRef = useRef<Audio.Sound | null>(null);      // 終了時に鳴らすサウンド
   const notifySoundRef = useRef<Audio.Sound | null>(null); // 区切りの通知音
 
@@ -45,6 +47,23 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
+
+  // state の残り秒数が変化したら参照値も更新
+  useEffect(() => {
+    remainingRef.current = remaining;
+  }, [remaining]);
+
+  // タイマーセットが切り替わったら状態を初期化
+  useEffect(() => {
+    setIndex(0);
+    indexRef.current = 0;
+    const d = getDuration(timerSet.timers[0]);
+    setRemaining(d);
+    remainingRef.current = d;
+    endAtRef.current = null;
+    setRunning(false);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  }, [timerSet.id]);
 
   // マウント時に実行開始を履歴へ記録
   useEffect(() => {
@@ -109,6 +128,38 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     notifySoundRef.current?.setVolumeAsync(state.settings.notificationVolume ?? 1);
   }, [state.settings.notificationVolume]);
 
+  // 1秒ごとに残り時間を計算し更新するインターバルをセットアップ
+  const setupInterval = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      if (endAtRef.current == null) return;
+      const remain = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
+      remainingRef.current = remain;
+      setRemaining(remain);
+      if (remain <= 0) {
+        clearInterval(intervalRef.current!);
+        endOne();
+      }
+    }, 1000);
+  };
+
+  // バックグラウンドから復帰した際に残り時間を補正
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && running && endAtRef.current != null) {
+        const remain = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
+        remainingRef.current = remain;
+        setRemaining(remain);
+        setupInterval();
+        if (remain <= 0) {
+          clearInterval(intervalRef.current!);
+          endOne();
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [running]);
+
   /**
    * 現在のタイマーを開始し1秒ごとのカウントダウンをセットする。
    * 通知設定が有効なら終了通知も予約する。
@@ -118,20 +169,12 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     if (!curr) return;
     const duration = getDuration(curr);
     const isLast = indexRef.current + 1 >= totalCount;
-    setRemaining(duration);
     setRunning(true);
+    remainingRef.current = duration;
+    setRemaining(duration);
+    endAtRef.current = Date.now() + duration * 1000;
     try { soundRef.current?.stopAsync(); } catch {}
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setRemaining((r) => {
-        if (r <= 1) {
-          clearInterval(intervalRef.current!);
-          endOne();
-          return 0;
-        }
-        return r - 1;
-      });
-    }, 1000);
+    setupInterval();
     if (
       state.settings.enableNotifications &&
       timerSet.notifications?.enabled &&
@@ -147,6 +190,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const pause = () => {
     setRunning(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (remainingRef.current) {
+      endAtRef.current = Date.now() + remainingRef.current * 1000;
+    }
   };
 
   /**
@@ -154,7 +200,11 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
    */
   const resetCurrent = () => {
     if (!current) return;
-    setRemaining(getDuration(current));
+    const d = getDuration(current);
+    remainingRef.current = d;
+    setRemaining(d);
+    endAtRef.current = running ? Date.now() + d * 1000 : null;
+    if (running) setupInterval();
   };
 
   const startRef = useRef(start);
@@ -205,7 +255,11 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       const next = currentIdx + 1;
       setIndex(next);
       indexRef.current = next;
-      setRemaining(getDuration(timerSet.timers[next]));
+      const d = getDuration(timerSet.timers[next]);
+      remainingRef.current = d;
+      setRemaining(d);
+      endAtRef.current = running ? Date.now() + d * 1000 : null;
+      if (running) setupInterval();
     } else {
       onFinish?.();
     }
@@ -217,6 +271,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const cancel = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
+     endAtRef.current = null;
     try { soundRef.current?.stopAsync(); } catch {}
     try { notifySoundRef.current?.stopAsync(); } catch {}
     onCancel?.();
