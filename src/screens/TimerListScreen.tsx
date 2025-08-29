@@ -10,7 +10,8 @@ export default function TimerListScreen({ navigation }: any) { // タイマー�
   const { state, dispatch } = useTimerState(); // 状態と操作関数を取得
 
   return ( // 画面描画
-    <View style={styles.container}> {/* 全体を包むコンテナ */}
+    <View style={styles.container}>
+      {/* 登録済みタイマーセットの一覧 */}
       <FlatList
         contentContainerStyle={{ padding: 16 }} // リスト全体の余白
         data={state.timerSets} // 表示するタイマーセット配列
@@ -42,11 +43,16 @@ export default function TimerListScreen({ navigation }: any) { // タイマー�
           /> // TimerSetCard終わり
         )} // renderItem終わり
         ListEmptyComponent={
-          <Text style={{ color: Colors.subText }}>まだタイマーセットがありません。右下の⊕から追加しましょう。</Text>
+          <Text style={{ color: Colors.subText }}>
+            まだタイマーセットがありません。右下の⊕から追加しましょう。
+          </Text>
         } // データが空のときの表示
-      /> {/* FlatList終わり */}
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('作成', { editId: undefined })}> {/* 追加ボタン */}
-        <Ionicons name="add-circle" size={64} color={Colors.primary} /> {/* 追加アイコン */}
+      />
+      <Pressable
+        style={styles.fab}
+        onPress={() => navigation.navigate('作成', { editId: undefined })}
+      >
+        <Ionicons name="add-circle" size={64} color={Colors.primary} />
       </Pressable>
     </View>
   ); // return終端

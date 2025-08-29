@@ -1,5 +1,5 @@
 import React from 'react'; // React本体をインポート
-import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native'; // ボタンやテキストなどのUI要素
+import { Pressable, Text, StyleSheet, ViewStyle, View } from 'react-native'; // ボタンやテキストなどのUI要素
 import { Ionicons } from '@expo/vector-icons'; // アイコンフォントを提供するライブラリ
 import { Colors } from '../constants/colors'; // 共通で利用するカラー定数
 
@@ -46,22 +46,22 @@ export default function IconButton({
         style, // 外部から渡された追加スタイル
       ]}
     >
-      <Ionicons
-        name={icon}
-        size={20}
-        color={textColor}
-        style={{ marginRight: 6 }}
-      />
-      <Text style={[styles.txt, { color: textColor }]} numberOfLines={1}>
-        {label}
-      </Text>
+      <View style={styles.content}>
+        <Ionicons
+          name={icon}
+          size={20}
+          color={textColor}
+          style={{ marginRight: 6 }}
+        />
+        <Text style={[styles.txt, { color: textColor }]} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
 const styles = StyleSheet.create({ // コンポーネントで使用するスタイル定義
   btn: { // ボタン全体のスタイル
-    flexDirection: 'row', // アイコンとテキストを横並びに配置
-    alignItems: 'center', // 垂直方向で中央揃え
     paddingHorizontal: 14, // 左右の余白
     paddingVertical: 10, // 上下の余白
     borderRadius: 12, // 角の丸み
@@ -70,6 +70,10 @@ const styles = StyleSheet.create({ // コンポーネントで使用するスタ
     shadowOffset: { width: 0, height: 2 }, // 影の位置
     shadowRadius: 4, // 影のぼかし半径
     elevation: 2, // Androidでの影の高さ
+  },
+  content: { // アイコンとテキストを横並びに配置
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   txt: { fontWeight: '700' }, // ボタンラベルを太字にする
   disabled: { opacity: 0.5 }, // 無効化時は半透明にする
