@@ -661,13 +661,15 @@ export default function HomeScreen() {
               type="secondary"
               style={styles.controlButton}
             />
-            <IconButton
-              label="PiP"
-              icon="open-outline"
-              onPress={enterPip}
-              type="secondary"
-              style={styles.controlButton}
-            />
+            {Platform.OS === 'android' && (
+              <IconButton
+                label="PiP"
+                icon="open-outline"
+                onPress={enterPip}
+                type="secondary"
+                style={styles.controlButton}
+              />
+            )}
           </View>
         </View>
       </ScrollView>

@@ -24,11 +24,13 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F0FAFF"
       },
-      "package": "com.example.tim"
+      "package": "com.example.tim",
+      "supportsPictureInPicture": true
     },
     "plugins": [
       "expo-notifications",
-      "expo-font"
+      "expo-font",
+      "react-native-pip-android"
     ],
     "useNextNotificationsApi": true,
     "notification": {
