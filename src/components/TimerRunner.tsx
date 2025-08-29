@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, AppState } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Timer, TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
 import { formatHMS } from '../utils/format';
@@ -7,7 +8,7 @@ import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
 import { scheduleEndNotification } from '../utils/notifications';
-import { usePipTimerControls } from '../utils/pip';
+import { usePipMode, usePipTimerControls } from '../utils/pip';
 
 // 複数のタイマーを連続で実行するランナーコンポーネント。
 // カウントダウン処理や音声再生、通知のスケジュールなどを管理する。
@@ -44,6 +45,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const totalCount = timerSet.timers.length; // タイマーの総数
   const current = timerSet.timers[index];    // 現在のタイマー
+  const { enterPip } = usePipMode();
 
   useEffect(() => {
     indexRef.current = index;
@@ -288,6 +290,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   return (
     <View style={styles.container}>
+      <Pressable onPress={enterPip} style={styles.pipBtn}>
+        <Ionicons name="open-outline" size={20} color={Colors.text} />
+      </Pressable>
       {/* セット名と現在のタイマー情報 */}
       <Text style={styles.name}>{timerSet.name}</Text>
       <Text style={styles.currentLabel}>{current?.label ?? '—'}</Text>
@@ -320,7 +325,17 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
 // このコンポーネントで利用するスタイル定義
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', padding: 20 },
+  container: { alignItems: 'center', padding: 20, width: '100%', position: 'relative' },
+  pipBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   name: { fontSize: 20, fontWeight: '700', color: Colors.text },
   currentLabel: { marginTop: 12, fontSize: 16, color: Colors.subText },
   time: { fontSize: 72, fontWeight: '800', color: Colors.primaryDark, marginVertical: 20 },
