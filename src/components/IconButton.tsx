@@ -46,8 +46,15 @@ export default function IconButton({
         style, // 外部から渡された追加スタイル
       ]}
     >
-      <Ionicons name={icon} size={20} color={textColor} style={{ marginRight: 6 }} /> {/* アイコン表示 */}
-      <Text style={[styles.txt, { color: textColor }]} numberOfLines={1}>{label}</Text> {/* ラベル表示 */}
+      <Ionicons
+        name={icon}
+        size={20}
+        color={textColor}
+        style={{ marginRight: 6 }}
+      />
+      <Text style={[styles.txt, { color: textColor }]} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
