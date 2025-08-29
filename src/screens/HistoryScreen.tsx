@@ -147,8 +147,10 @@ export default function HistoryScreen() {
   const CHART_HEIGHT = 260;
   // X軸ラベル分の余白。これを増減するとラベルの表示位置が変わる
   const CHART_PADDING_BOTTOM = 80;
+  // 最後のバーが切れないよう左端に追加する余白
+  const chartPaddingLeft = 25;
   // 最後のバーが切れないよう右端に追加する余白
-  const chartPaddingRight = 20;
+  const chartPaddingRight = 25;
   // 最初の目盛ラベルがY軸の下に隠れないよう左側に追加する余白
   const FIRST_LABEL_PADDING = 40;
 
@@ -252,8 +254,8 @@ export default function HistoryScreen() {
                   <VictoryChart
                     width={chartWidth}
                     height={CHART_HEIGHT}
-                    // 上下左右の余白設定。右端は棒が切れないように調整
-                    padding={{ top: 10, bottom: CHART_PADDING_BOTTOM, left: 0, right: chartPaddingRight }}
+                    // 上下左右の余白設定。右左端は棒が切れないように調整
+                    padding={{ top: 10, bottom: CHART_PADDING_BOTTOM, left: chartPaddingLeft, right: chartPaddingRight }}
                     // X軸左右に半分ずつ余白を設けて端の棒がくっつかないようにする
                     domainPadding={{ x: [BAR_GAP / 2, BAR_GAP / 2], y: [0, 20] }}
                     // Y軸の表示範囲を0〜計算した最大値に固定
