@@ -5,7 +5,7 @@ export type PipHandlers = {
   selectType?: () => void;
 };
 
-// No-op implementation for non-Android platforms
+// Fallback no-op implementation for platforms without PiP support
 export const enterPipMode = () => {};
 
 export const usePipMode = () => {
