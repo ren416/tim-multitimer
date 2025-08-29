@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   ScrollView,
   View,
@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
+import { usePipTimerControls, usePipMode } from '../utils/pip';
 
 // ホーム画面。選択したタイマーセットの実行や簡易タイマーの操作を提供する。
 
@@ -60,6 +61,7 @@ export default function HomeScreen() {
   const notifySoundRef = useRef<Audio.Sound | null>(null);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const { inPip, enterPip } = usePipMode();
 
   const elapsedRef = useRef(0);
   const lastUpdateRef = useRef(Date.now());
@@ -474,6 +476,42 @@ export default function HomeScreen() {
     }
   };
 
+  // PiPからタイマーセットを切り替える
+  const cycleSet = useCallback(() => {
+    const sets = state.timerSets;
+    if (sets.length === 0) return;
+    const currentIdx = sets.findIndex(s => s.id === selectedId);
+    const next = sets[(currentIdx + 1) % sets.length];
+    setSelectedId(next.id);
+  }, [state.timerSets, selectedId]);
+
+  // PiP操作に対応するハンドラを登録
+  usePipTimerControls({
+    start: () => start(),
+    stop,
+    reset,
+    selectType: cycleSet,
+  });
+
+  if (inPip) {
+    return (
+      <View style={pipStyles.container}>
+        <Pressable onPress={cycleSet}>
+          <Text style={pipStyles.name}>{selectedSet?.name ?? 'クイックタイマー'}</Text>
+        </Pressable>
+        <Text style={pipStyles.time}>{formatHMS(remaining)}</Text>
+        <View style={pipStyles.controls}>
+          <Pressable onPress={start} style={[pipStyles.btn, pipStyles.primary]}>
+            <Text style={pipStyles.btnText}>開始</Text>
+          </Pressable>
+          <Pressable onPress={stop} style={[pipStyles.btn, pipStyles.secondary]}>
+            <Text style={pipStyles.btnText}>停止</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   // 現在のタイマーが終了したときの処理
   const endOne = async () => {
     if (!selectedSet) return;
@@ -620,6 +658,13 @@ export default function HomeScreen() {
               icon={showReset ? 'refresh' : 'pause'}
               onPress={showReset ? reset : stop}
               disabled={!showReset && !running && !soundPlaying}
+              type="secondary"
+              style={styles.controlButton}
+            />
+            <IconButton
+              label="PiP"
+              icon="open-outline"
+              onPress={enterPip}
               type="secondary"
               style={styles.controlButton}
             />
@@ -877,4 +922,21 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
   hiddenInput: { height: 0, width: 0 },
   timerCard: { marginTop: 20, alignItems: 'center', flex: 1 },
+});
+
+const pipStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+  },
+  name: { fontSize: 16, fontWeight: '700', color: Colors.text },
+  time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
+  controls: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  btn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
+  primary: { backgroundColor: Colors.primary },
+  secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
+  btnText: { color: '#0B1D2A', fontWeight: '700' },
 });

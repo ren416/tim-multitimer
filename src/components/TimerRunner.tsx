@@ -7,6 +7,7 @@ import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
 import { scheduleEndNotification } from '../utils/notifications';
+import { usePipTimerControls } from '../utils/pip';
 
 // 複数のタイマーを連続で実行するランナーコンポーネント。
 // カウントダウン処理や音声再生、通知のスケジュールなどを管理する。
@@ -276,6 +277,14 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     try { notifySoundRef.current?.stopAsync(); } catch {}
     onCancel?.();
   };
+
+  // Enable PiP controls when app goes to background
+  usePipTimerControls({
+    start,
+    stop: pause,
+    reset: resetCurrent,
+    selectType: skip,
+  });
 
   return (
     <View style={styles.container}>
