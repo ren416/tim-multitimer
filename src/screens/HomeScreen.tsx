@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
+import * as IntentLauncher from 'expo-intent-launcher';
 import {
   initTimerNotification,
   registerTimerActionHandler,
@@ -491,6 +492,11 @@ export default function HomeScreen() {
       ? selectedSet.timers[indexRef.current]?.label ?? ''
       : '';
     updateTimerNotification(setName, timerName, remaining);
+    if (Platform.OS === 'android') {
+      IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MAIN, {
+        category: IntentLauncher.ActivityCategory.HOME,
+      });
+    }
   };
 
   // 実行中のタイマーや入力値をリセット
