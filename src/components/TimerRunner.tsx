@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, AppState } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Timer, TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
 import { formatHMS } from '../utils/format';
@@ -291,7 +291,11 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   return (
     <View style={styles.container}>
       <Pressable onPress={enterPip} style={styles.pipBtn}>
-        <Ionicons name="open-outline" size={20} color={Colors.text} />
+        <MaterialIcons
+          name="picture-in-picture-alt"
+          size={24}
+          color={Colors.text}
+        />
       </Pressable>
       {/* セット名と現在のタイマー情報 */}
       <Text style={styles.name}>{timerSet.name}</Text>
