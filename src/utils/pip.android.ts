@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppState, DeviceEventEmitter } from 'react-native';
+import { AppState, DeviceEventEmitter, BackHandler } from 'react-native';
 import PipHandler from 'react-native-pip-android';
 
 export type PipHandlers = {
@@ -49,8 +49,30 @@ export const usePipMode = () => {
     };
   }, []);
 
+  // Dynamically resolve the optional intent launcher so the app can
+  // fall back gracefully when the module isn't available.
+  let intentLauncher: any;
+  try {
+    // eslint-disable-next-line global-require
+    intentLauncher = require('expo-intent-launcher');
+  } catch {
+    intentLauncher = null;
+  }
+
   const manualEnter = () => {
     enterPipMode();
+    // After requesting PiP, navigate the user to the home screen so the
+    // system shows the floating window immediately, similar to YouTube.
+    if (intentLauncher?.startActivityAsync) {
+      intentLauncher
+        .startActivityAsync(intentLauncher.ActivityAction?.HOME ?? 'android.intent.action.MAIN')
+        .catch(() => {});
+    } else {
+      // Fallback: simply move the app to the background.
+      try {
+        BackHandler.exitApp();
+      } catch {}
+    }
   };
 
   return { inPip, enterPip: manualEnter } as const;
