@@ -18,6 +18,13 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
+import {
+  initTimerNotification,
+  registerTimerActionHandler,
+  unregisterTimerActionHandler,
+  updateTimerNotification,
+  clearTimerNotification,
+} from '../utils/timerNotification';
 
 // ホーム画面。選択したタイマーセットの実行や簡易タイマーの操作を提供する。
 
@@ -408,6 +415,11 @@ export default function HomeScreen() {
     lastUpdateRef.current = Date.now();
     endTimeRef.current = Date.now() + rem * 1000;
     setRunning(true);
+    updateTimerNotification(
+      selectedSet ? selectedSet.name : '"クイックタイマー"',
+      selectedSet ? selectedSet.timers[indexRef.current]?.label ?? '' : '',
+      rem,
+    );
     intervalRef.current = setInterval(() => {
       if (endTimeRef.current == null) return;
       const left = Math.ceil((endTimeRef.current - Date.now()) / 1000);
@@ -416,8 +428,18 @@ export default function HomeScreen() {
         intervalRef.current = null;
         endTimeRef.current = null;
         setRemaining(0);
+        updateTimerNotification(
+          selectedSet ? selectedSet.name : '"クイックタイマー"',
+          selectedSet ? selectedSet.timers[indexRef.current]?.label ?? '' : '',
+          0,
+        );
       } else {
         setRemaining(left);
+        updateTimerNotification(
+          selectedSet ? selectedSet.name : '"クイックタイマー"',
+          selectedSet ? selectedSet.timers[indexRef.current]?.label ?? '' : '',
+          left,
+        );
       }
     }, 1000);
   };
@@ -426,6 +448,19 @@ export default function HomeScreen() {
   useEffect(() => {
     startRef.current = start;
   });
+
+  useEffect(() => {
+    initTimerNotification();
+    registerTimerActionHandler({
+      onStart: () => startRef.current(),
+      onPause: stop,
+      onReset: reset,
+    });
+    return () => {
+      unregisterTimerActionHandler();
+      clearTimerNotification();
+    };
+  }, []);
 
   // カウントダウンを停止
   const stop = () => {
@@ -443,6 +478,19 @@ export default function HomeScreen() {
     notifySoundRef.current?.stopAsync().catch(() => {});
     setSoundPlaying(false);
     setShowReset(true);
+    updateTimerNotification(
+      selectedSet ? selectedSet.name : '"クイックタイマー"',
+      selectedSet ? selectedSet.timers[indexRef.current]?.label ?? '' : '',
+      remaining,
+    );
+  };
+
+  const switchToNotification = () => {
+    const setName = selectedSet ? selectedSet.name : '"クイックタイマー"';
+    const timerName = selectedSet
+      ? selectedSet.timers[indexRef.current]?.label ?? ''
+      : '';
+    updateTimerNotification(setName, timerName, remaining);
   };
 
   // 実行中のタイマーや入力値をリセット
@@ -471,6 +519,7 @@ export default function HomeScreen() {
       setQuickDigits('');
       setQuickInitial(0);
     }
+    clearTimerNotification();
   };
 
 
@@ -546,20 +595,22 @@ export default function HomeScreen() {
         setRunCount(0);
         setTotalSec(0);
       }
+      clearTimerNotification();
     }
   };
 
   useEffect(() => {
     if (remaining === 0 && running) {
-      if (selectedSet) {
-        endOne();
-      } else {
-        setRunning(false);
-        soundRef.current?.replayAsync().catch(() => {});
-        setShowReset(true);
-      }
+    if (selectedSet) {
+      endOne();
+    } else {
+      setRunning(false);
+      soundRef.current?.replayAsync().catch(() => {});
+      setShowReset(true);
+      clearTimerNotification();
     }
-  }, [remaining, running, selectedSet]);
+  }
+}, [remaining, running, selectedSet]);
 
   return (
     <>
@@ -575,6 +626,9 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.card, styles.timerCard]}>
+          <Pressable style={styles.notificationBtn} onPress={switchToNotification}>
+            <Ionicons name="open-outline" size={20} color={Colors.text} />
+          </Pressable>
           {selectedSet ? (
             <>
               <Text style={styles.infoText}>{`タイマーセット名：${selectedSet.name}`}</Text>
@@ -877,6 +931,12 @@ const styles = StyleSheet.create({
   modalTimerText: { color: Colors.subText, fontSize: 12 },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
   hiddenInput: { height: 0, width: 0 },
+  notificationBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+  },
   timerCard: { marginTop: 20, alignItems: 'center', flex: 1 },
 });
 

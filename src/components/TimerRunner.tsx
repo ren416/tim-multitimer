@@ -7,6 +7,13 @@ import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
 import { scheduleEndNotification } from '../utils/notifications';
+import {
+  initTimerNotification,
+  registerTimerActionHandler,
+  unregisterTimerActionHandler,
+  updateTimerNotification,
+  clearTimerNotification,
+} from '../utils/timerNotification';
 
 // 複数のタイマーを連続で実行するランナーコンポーネント。
 // カウントダウン処理や音声再生、通知のスケジュールなどを管理する。
@@ -136,6 +143,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       const remain = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
       remainingRef.current = remain;
       setRemaining(remain);
+      const currTimer = timerSet.timers[indexRef.current];
+      updateTimerNotification(timerSet.name, currTimer?.label ?? '', remain);
       if (remain <= 0) {
         clearInterval(intervalRef.current!);
         endOne();
@@ -175,6 +184,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     endAtRef.current = Date.now() + duration * 1000;
     try { soundRef.current?.stopAsync(); } catch {}
     setupInterval();
+    updateTimerNotification(timerSet.name, curr.label ?? '', duration);
     if (
       state.settings.enableNotifications &&
       timerSet.notifications?.enabled &&
@@ -193,6 +203,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     if (remainingRef.current) {
       endAtRef.current = Date.now() + remainingRef.current * 1000;
     }
+    updateTimerNotification(timerSet.name, current?.label ?? '', remainingRef.current);
   };
 
   /**
@@ -205,6 +216,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     setRemaining(d);
     endAtRef.current = running ? Date.now() + d * 1000 : null;
     if (running) setupInterval();
+    updateTimerNotification(timerSet.name, current.label ?? '', d);
   };
 
   const startRef = useRef(start);
@@ -242,6 +254,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       startRef.current();
     } else {
       setRunning(false);
+      clearTimerNotification();
       onFinish?.();
     }
   };
@@ -260,6 +273,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       setRemaining(d);
       endAtRef.current = running ? Date.now() + d * 1000 : null;
       if (running) setupInterval();
+      const nextTimer = timerSet.timers[next];
+      updateTimerNotification(timerSet.name, nextTimer.label ?? '', d);
     } else {
       onFinish?.();
     }
@@ -274,8 +289,23 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
      endAtRef.current = null;
     try { soundRef.current?.stopAsync(); } catch {}
     try { notifySoundRef.current?.stopAsync(); } catch {}
+    clearTimerNotification();
     onCancel?.();
   };
+
+  // Setup notification channel/category and handle actions
+  useEffect(() => {
+    initTimerNotification();
+    registerTimerActionHandler({
+      onStart: () => startRef.current(),
+      onPause: pause,
+      onReset: resetCurrent,
+    });
+    return () => {
+      unregisterTimerActionHandler();
+      clearTimerNotification();
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
