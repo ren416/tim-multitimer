@@ -1,50 +1,50 @@
 ﻿{
-  "expo": {
-    "name": "Tim - 多機能タイマーアプリ",
-    "slug": "tim-multitimer",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "scheme": "tim",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F0FAFF"
-    },
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.example.tim"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#F0FAFF"
-      },
-      "package": "com.example.tim",
-      "supportsPictureInPicture": true
-    },
-    "plugins": [
-      "expo-notifications",
-      "expo-font",
-      [
-        "expo-video",
-        {
-          "supportsBackgroundPlayback": true,
-          "supportsPictureInPicture": true
-        }
-      ]
-    ],
-    "useNextNotificationsApi": true,
-    "notification": {
-      "icon": "./assets/notification-icon.png",
-      "color": "#7EC8E3"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
-      }
-    }
-  }
+    "expo":  {
+                 "name":  "Tim",
+                 "slug":  "tim-multitimer",
+                 "version":  "1.0.0",
+                 "orientation":  "portrait",
+                 "icon":  ".\\assets\\icon.fixed.png",
+                 "scheme":  "tim",
+                 "userInterfaceStyle":  "light",
+                 "splash":  {
+                                "image":  ".\\assets\\splash.fixed.png",
+                                "resizeMode":  "contain",
+                                "backgroundColor":  "#F0FAFF"
+                            },
+                 "newArchEnabled":  true,
+                 "ios":  {
+                             "supportsTablet":  true,
+                             "bundleIdentifier":  "com.example.tim"
+                         },
+                 "android":  {
+                                 "adaptiveIcon":  {
+                                                      "foregroundImage":  ".\\assets\\adaptive-icon.fixed.png",
+                                                      "backgroundColor":  "#F0FAFF"
+                                                  },
+                                 "package":  "com.example.tim",
+                                 "supportsPictureInPicture":  true
+                             },
+                 "plugins":  [
+                                 "expo-notifications",
+                                 "expo-font",
+                                 [
+                                     "expo-video",
+                                     {
+                                         "supportsBackgroundPlayback":  true,
+                                         "supportsPictureInPicture":  true
+                                     }
+                                 ]
+                             ],
+                 "useNextNotificationsApi":  true,
+                 "notification":  {
+                                      "icon":  "./assets/notification-icon.png",
+                                      "color":  "#7EC8E3"
+                                  },
+                 "extra":  {
+                               "eas":  {
+                                           "projectId":  "00000000-0000-0000-0000-000000000000"
+                                       }
+                           }
+             }
 }
