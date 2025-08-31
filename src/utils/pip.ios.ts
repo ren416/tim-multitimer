@@ -43,7 +43,6 @@ export const usePipMode = () => {
 
   const manualEnter = () => {
     enterPipMode();
-    setInPip(true);
   };
 
   return { inPip, enterPip: manualEnter } as const;
