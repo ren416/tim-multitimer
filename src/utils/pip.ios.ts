@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
-import PipHandler from 'react-native-pip-iphone';
+import { AppState, NativeModules } from 'react-native';
+
+// Access the native PiP handler directly to avoid depending on the
+// `react-native-pip-iphone` package, which isn't available in this repo.
+// When the native module isn't linked, fall back to a noop object so that
+// bundling still succeeds without the dependency installed.
+const PipHandler: {
+  enterPictureInPicture?: () => void;
+  exitPictureInPicture?: () => void;
+} = (NativeModules as any)?.PipHandler ?? {};
 
 export type PipHandlers = {
   start?: () => void;
