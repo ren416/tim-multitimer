@@ -86,7 +86,7 @@ export const updateTimerNotification = async (
         sticky: true,
         color: '#2196f3',
       },
-    },
+    } as any,
     trigger: null,
   });
 };
