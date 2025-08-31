@@ -491,6 +491,16 @@ export default function HomeScreen() {
       ? selectedSet.timers[indexRef.current]?.label ?? ''
       : '';
     updateTimerNotification(setName, timerName, remaining);
+    if (Platform.OS === 'android') {
+      try {
+        const IntentLauncher = require('expo-intent-launcher') as typeof import('expo-intent-launcher');
+        IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MAIN, {
+          category: IntentLauncher.ActivityCategory.HOME,
+        });
+      } catch (e) {
+        console.warn('IntentLauncher unavailable', e);
+      }
+    }
   };
 
   // 実行中のタイマーや入力値をリセット
