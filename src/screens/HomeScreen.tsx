@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -7,7 +7,6 @@ import {
   Pressable,
   Modal,
   TextInput,
-  GestureResponderEvent,
   Platform,
 } from 'react-native';
 import { Colors } from '../constants/colors';
@@ -15,11 +14,10 @@ import { useTimerState, Timer } from '../context/TimerContext';
 import { formatHMS } from '../utils/format';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
-import { usePipTimerControls, usePipMode } from '../utils/pip';
 
 // ホーム画面。選択したタイマーセットの実行や簡易タイマーの操作を提供する。
 
@@ -61,7 +59,6 @@ export default function HomeScreen() {
   const notifySoundRef = useRef<Audio.Sound | null>(null);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const [showReset, setShowReset] = useState(false);
-  const { inPip, enterPip } = usePipMode();
 
   const elapsedRef = useRef(0);
   const lastUpdateRef = useRef(Date.now());
@@ -211,22 +208,6 @@ export default function HomeScreen() {
 
   // 表示モードに応じた時間表示を生成
   const renderTimeDisplay = (mode: 'simple' | 'bar' | 'circle') => {
-    const pipButton = (
-      <Pressable
-        onPress={(e: GestureResponderEvent) => {
-          e.stopPropagation();
-          enterPip();
-        }}
-        style={styles.pipBtn}
-      >
-        <MaterialIcons
-          name="picture-in-picture-alt"
-          size={24}
-          color={Colors.text}
-        />
-      </Pressable>
-    );
-
     const timeText = (
       <Text style={styles.time}>
         {selectedSet || running || remaining > 0
@@ -238,7 +219,6 @@ export default function HomeScreen() {
     if (mode === 'bar') {
       return (
         <View style={styles.displayFrame}>
-          {pipButton}
           {timeText}
           <View style={styles.barTrack}>
             <View style={[styles.barProgress, { width: `${progress * 100}%` }]} />
@@ -257,7 +237,6 @@ export default function HomeScreen() {
       const circumference = 2 * Math.PI * radius;
       return (
         <View style={styles.displayFrame}>
-          {pipButton}
           <View style={{ width: size, height: size }}>
             <Svg width={size} height={size}>
               <G rotation="-90" origin={`${size / 2},${size / 2}`}>
@@ -293,7 +272,7 @@ export default function HomeScreen() {
       );
     }
 
-    return <View style={styles.displayFrame}>{pipButton}{timeText}</View>;
+    return <View style={styles.displayFrame}>{timeText}</View>;
   };
 
   useEffect(() => {
@@ -494,22 +473,6 @@ export default function HomeScreen() {
     }
   };
 
-  // PiPからタイマーセットを切り替える
-  const cycleSet = useCallback(() => {
-    const sets = state.timerSets;
-    if (sets.length === 0) return;
-    const currentIdx = sets.findIndex(s => s.id === selectedId);
-    const next = sets[(currentIdx + 1) % sets.length];
-    setSelectedId(next.id);
-  }, [state.timerSets, selectedId]);
-
-  // PiP操作に対応するハンドラを登録
-  usePipTimerControls({
-    start: () => start(),
-    stop,
-    reset,
-    selectType: cycleSet,
-  });
 
   // 現在のタイマーが終了したときの処理
   const endOne = async () => {
@@ -597,25 +560,6 @@ export default function HomeScreen() {
       }
     }
   }, [remaining, running, selectedSet]);
-
-  if (inPip) {
-    return (
-      <View style={pipStyles.container}>
-        <Pressable onPress={cycleSet}>
-          <Text style={pipStyles.name}>{selectedSet?.name ?? 'クイックタイマー'}</Text>
-        </Pressable>
-        <Text style={pipStyles.time}>{formatHMS(remaining)}</Text>
-        <View style={pipStyles.controls}>
-          <Pressable onPress={start} style={[pipStyles.btn, pipStyles.primary]}>
-            <Text style={pipStyles.btnText}>開始</Text>
-          </Pressable>
-          <Pressable onPress={stop} style={[pipStyles.btn, pipStyles.secondary]}>
-            <Text style={pipStyles.btnText}>停止</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <>
@@ -877,16 +821,6 @@ const styles = StyleSheet.create({
     padding: 12,
     position: 'relative',
   },
-  pipBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
   barTrack: {
     position: 'relative',
     width: '80%',
@@ -946,19 +880,3 @@ const styles = StyleSheet.create({
   timerCard: { marginTop: 20, alignItems: 'center', flex: 1 },
 });
 
-const pipStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  name: { fontSize: 16, fontWeight: '700', color: Colors.text },
-  time: { fontSize: 48, fontWeight: '800', color: Colors.primaryDark, marginVertical: 12 },
-  controls: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  btn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
-  primary: { backgroundColor: Colors.primary },
-  secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
-  btnText: { color: '#0B1D2A', fontWeight: '700' },
-});

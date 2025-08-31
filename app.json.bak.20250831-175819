@@ -22,8 +22,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F0FAFF"
       },
-      "package": "com.example.tim",
-      "supportsPictureInPicture": true
+      "package": "com.example.tim"
     },
     "plugins": [
       "expo-notifications",
@@ -31,8 +30,7 @@
       [
         "expo-video",
         {
-          "supportsBackgroundPlayback": true,
-          "supportsPictureInPicture": true
+          "supportsBackgroundPlayback": true
         }
       ]
     ],

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, AppState } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { Timer, TimerSet } from '../context/TimerContext';
 import { Colors } from '../constants/colors';
 import { formatHMS } from '../utils/format';
@@ -8,7 +7,6 @@ import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
 import { scheduleEndNotification } from '../utils/notifications';
-import { usePipMode, usePipTimerControls } from '../utils/pip';
 
 // 複数のタイマーを連続で実行するランナーコンポーネント。
 // カウントダウン処理や音声再生、通知のスケジュールなどを管理する。
@@ -45,7 +43,6 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const totalCount = timerSet.timers.length; // タイマーの総数
   const current = timerSet.timers[index];    // 現在のタイマー
-  const { inPip, enterPip } = usePipMode();
 
   useEffect(() => {
     indexRef.current = index;
@@ -280,47 +277,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     onCancel?.();
   };
 
-  // Enable PiP controls when app goes to background
-  usePipTimerControls({
-    start,
-    stop: pause,
-    reset: resetCurrent,
-    selectType: skip,
-  });
-
-  if (inPip) {
-    return (
-      <View style={pipStyles.container}>
-        <Text style={pipStyles.name}>{timerSet.name}</Text>
-        <Text style={pipStyles.current}>{current?.label ?? '—'}</Text>
-        <Text style={pipStyles.time}>{formatHMS(remaining)}</Text>
-        <View style={pipStyles.controls}>
-          {!running ? (
-            <Pressable onPress={start} style={[pipStyles.btn, pipStyles.primary]}>
-              <Text style={pipStyles.btnText}>開始</Text>
-            </Pressable>
-          ) : (
-            <Pressable onPress={pause} style={[pipStyles.btn, pipStyles.secondary]}>
-              <Text style={pipStyles.btnText}>停止</Text>
-            </Pressable>
-          )}
-          <Pressable onPress={skip} style={[pipStyles.btn, pipStyles.secondary]}>
-            <Text style={pipStyles.btnText}>スキップ</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <Pressable onPress={enterPip} style={styles.pipBtn}>
-        <MaterialIcons
-          name="picture-in-picture-alt"
-          size={24}
-          color={Colors.text}
-        />
-      </Pressable>
       {/* セット名と現在のタイマー情報 */}
       <Text style={styles.name}>{timerSet.name}</Text>
       <Text style={styles.currentLabel}>{current?.label ?? '—'}</Text>
@@ -354,16 +312,6 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 // このコンポーネントで利用するスタイル定義
 const styles = StyleSheet.create({
   container: { alignItems: 'center', padding: 20, width: '100%', position: 'relative' },
-  pipBtn: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    padding: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
   name: { fontSize: 20, fontWeight: '700', color: Colors.text },
   currentLabel: { marginTop: 12, fontSize: 16, color: Colors.subText },
   time: { fontSize: 72, fontWeight: '800', color: Colors.primaryDark, marginVertical: 20 },
@@ -376,25 +324,3 @@ const styles = StyleSheet.create({
   progress: { marginTop: 10, color: Colors.subText }
 });
 
-const pipStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  name: { fontSize: 16, fontWeight: '700', color: Colors.text },
-  current: { fontSize: 14, color: Colors.subText, marginTop: 4 },
-  time: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: Colors.primaryDark,
-    marginVertical: 12,
-  },
-  controls: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  btn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
-  primary: { backgroundColor: Colors.primary },
-  secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
-  btnText: { color: '#0B1D2A', fontWeight: '700' },
-});
