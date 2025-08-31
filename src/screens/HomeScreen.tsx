@@ -15,7 +15,7 @@ import { useTimerState, Timer } from '../context/TimerContext';
 import { formatHMS } from '../utils/format';
 import { uuidv4 } from '../utils/uuid';
 import IconButton from '../components/IconButton';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
@@ -211,6 +211,22 @@ export default function HomeScreen() {
 
   // 表示モードに応じた時間表示を生成
   const renderTimeDisplay = (mode: 'simple' | 'bar' | 'circle') => {
+    const pipButton = (
+      <Pressable
+        onPress={(e: GestureResponderEvent) => {
+          e.stopPropagation();
+          enterPip();
+        }}
+        style={styles.pipBtn}
+      >
+        <MaterialIcons
+          name="picture-in-picture-alt"
+          size={24}
+          color={Colors.text}
+        />
+      </Pressable>
+    );
+
     const timeText = (
       <Text style={styles.time}>
         {selectedSet || running || remaining > 0
@@ -222,6 +238,7 @@ export default function HomeScreen() {
     if (mode === 'bar') {
       return (
         <View style={styles.displayFrame}>
+          {pipButton}
           {timeText}
           <View style={styles.barTrack}>
             <View style={[styles.barProgress, { width: `${progress * 100}%` }]} />
@@ -240,6 +257,7 @@ export default function HomeScreen() {
       const circumference = 2 * Math.PI * radius;
       return (
         <View style={styles.displayFrame}>
+          {pipButton}
           <View style={{ width: size, height: size }}>
             <Svg width={size} height={size}>
               <G rotation="-90" origin={`${size / 2},${size / 2}`}>
@@ -275,7 +293,7 @@ export default function HomeScreen() {
       );
     }
 
-    return <View style={styles.displayFrame}>{timeText}</View>;
+    return <View style={styles.displayFrame}>{pipButton}{timeText}</View>;
   };
 
   useEffect(() => {
@@ -661,15 +679,6 @@ export default function HomeScreen() {
               type="secondary"
               style={styles.controlButton}
             />
-            {Platform.OS === 'android' && (
-              <IconButton
-                label="PiP"
-                icon="open-outline"
-                onPress={enterPip}
-                type="secondary"
-                style={styles.controlButton}
-              />
-            )}
           </View>
         </View>
       </ScrollView>
@@ -866,6 +875,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 12,
     padding: 12,
+    position: 'relative',
+  },
+  pipBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   barTrack: {
     position: 'relative',
