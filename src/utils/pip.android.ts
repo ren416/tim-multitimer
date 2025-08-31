@@ -36,8 +36,6 @@ export const usePipMode = () => {
     const appStateSub = AppState.addEventListener('change', state => {
       if (state === 'active') {
         setInPip(false);
-      } else if (state === 'background') {
-        setInPip(true);
       }
     });
 
@@ -53,7 +51,6 @@ export const usePipMode = () => {
 
   const manualEnter = () => {
     enterPipMode();
-    setInPip(true);
   };
 
   return { inPip, enterPip: manualEnter } as const;

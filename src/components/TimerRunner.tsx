@@ -45,7 +45,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   const totalCount = timerSet.timers.length; // タイマーの総数
   const current = timerSet.timers[index];    // 現在のタイマー
-  const { enterPip } = usePipMode();
+  const { inPip, enterPip } = usePipMode();
 
   useEffect(() => {
     indexRef.current = index;
@@ -288,6 +288,30 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     selectType: skip,
   });
 
+  if (inPip) {
+    return (
+      <View style={pipStyles.container}>
+        <Text style={pipStyles.name}>{timerSet.name}</Text>
+        <Text style={pipStyles.current}>{current?.label ?? '—'}</Text>
+        <Text style={pipStyles.time}>{formatHMS(remaining)}</Text>
+        <View style={pipStyles.controls}>
+          {!running ? (
+            <Pressable onPress={start} style={[pipStyles.btn, pipStyles.primary]}>
+              <Text style={pipStyles.btnText}>開始</Text>
+            </Pressable>
+          ) : (
+            <Pressable onPress={pause} style={[pipStyles.btn, pipStyles.secondary]}>
+              <Text style={pipStyles.btnText}>停止</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={skip} style={[pipStyles.btn, pipStyles.secondary]}>
+            <Text style={pipStyles.btnText}>スキップ</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Pressable onPress={enterPip} style={styles.pipBtn}>
@@ -350,4 +374,27 @@ const styles = StyleSheet.create({
   danger: { backgroundColor: Colors.danger },
   btnText: { color: '#0B1D2A', fontWeight: '700' },
   progress: { marginTop: 10, color: Colors.subText }
+});
+
+const pipStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+  },
+  name: { fontSize: 16, fontWeight: '700', color: Colors.text },
+  current: { fontSize: 14, color: Colors.subText, marginTop: 4 },
+  time: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: Colors.primaryDark,
+    marginVertical: 12,
+  },
+  controls: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  btn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
+  primary: { backgroundColor: Colors.primary },
+  secondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
+  btnText: { color: '#0B1D2A', fontWeight: '700' },
 });
