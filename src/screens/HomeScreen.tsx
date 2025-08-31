@@ -511,25 +511,6 @@ export default function HomeScreen() {
     selectType: cycleSet,
   });
 
-  if (inPip) {
-    return (
-      <View style={pipStyles.container}>
-        <Pressable onPress={cycleSet}>
-          <Text style={pipStyles.name}>{selectedSet?.name ?? 'クイックタイマー'}</Text>
-        </Pressable>
-        <Text style={pipStyles.time}>{formatHMS(remaining)}</Text>
-        <View style={pipStyles.controls}>
-          <Pressable onPress={start} style={[pipStyles.btn, pipStyles.primary]}>
-            <Text style={pipStyles.btnText}>開始</Text>
-          </Pressable>
-          <Pressable onPress={stop} style={[pipStyles.btn, pipStyles.secondary]}>
-            <Text style={pipStyles.btnText}>停止</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
   // 現在のタイマーが終了したときの処理
   const endOne = async () => {
     if (!selectedSet) return;
@@ -616,6 +597,25 @@ export default function HomeScreen() {
       }
     }
   }, [remaining, running, selectedSet]);
+
+  if (inPip) {
+    return (
+      <View style={pipStyles.container}>
+        <Pressable onPress={cycleSet}>
+          <Text style={pipStyles.name}>{selectedSet?.name ?? 'クイックタイマー'}</Text>
+        </Pressable>
+        <Text style={pipStyles.time}>{formatHMS(remaining)}</Text>
+        <View style={pipStyles.controls}>
+          <Pressable onPress={start} style={[pipStyles.btn, pipStyles.primary]}>
+            <Text style={pipStyles.btnText}>開始</Text>
+          </Pressable>
+          <Pressable onPress={stop} style={[pipStyles.btn, pipStyles.secondary]}>
+            <Text style={pipStyles.btnText}>停止</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <>
