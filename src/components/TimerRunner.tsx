@@ -7,6 +7,7 @@ import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
 import { scheduleEndNotification } from '../utils/notifications';
+import TimerService from '../native/TimerService';
 
 // 複数のタイマーを連続で実行するランナーコンポーネント。
 // カウントダウン処理や音声再生、通知のスケジュールなどを管理する。
@@ -175,6 +176,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     endAtRef.current = Date.now() + duration * 1000;
     try { soundRef.current?.stopAsync(); } catch {}
     setupInterval();
+    TimerService.startTimer(timerSet.name, curr.label ?? '', duration);
     if (
       state.settings.enableNotifications &&
       timerSet.notifications?.enabled &&
@@ -193,6 +195,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     if (remainingRef.current) {
       endAtRef.current = Date.now() + remainingRef.current * 1000;
     }
+     TimerService.stopTimer();
   };
 
   /**
@@ -205,6 +208,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     setRemaining(d);
     endAtRef.current = running ? Date.now() + d * 1000 : null;
     if (running) setupInterval();
+    TimerService.resetTimer(timerSet.name, current.label ?? '', d);
   };
 
   const startRef = useRef(start);
@@ -260,6 +264,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       setRemaining(d);
       endAtRef.current = running ? Date.now() + d * 1000 : null;
       if (running) setupInterval();
+      const nextTimer = timerSet.timers[next];
+      TimerService.resetTimer(timerSet.name, nextTimer.label ?? '', d);
+      if (running) TimerService.startTimer(timerSet.name, nextTimer.label ?? '', d);
     } else {
       onFinish?.();
     }
@@ -274,6 +281,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
      endAtRef.current = null;
     try { soundRef.current?.stopAsync(); } catch {}
     try { notifySoundRef.current?.stopAsync(); } catch {}
+    TimerService.cancelTimer();
     onCancel?.();
   };
 
