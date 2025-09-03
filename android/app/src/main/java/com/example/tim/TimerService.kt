@@ -58,9 +58,10 @@ class TimerService : Service() {
     private fun startTimer() {
         endTime = System.currentTimeMillis() + remainingSec * 1000L
         running = true
-        startForeground(NOTIFICATION_ID, buildNotification())
-        handler.removeCallbacks(updateRunnable)
-        handler.post(updateRunnable)
+        val notification = buildNotification()
+        startForeground(NOTIFICATION_ID, notification)
+        handler.removeCallbacks(finishRunnable)
+        handler.postAtTime(finishRunnable, endTime)
     }
 
     private fun stopTimer() {
@@ -68,7 +69,7 @@ class TimerService : Service() {
             remainingSec = ((endTime - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
         }
         running = false
-        handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacks(finishRunnable)
         updateNotification()
     }
 
@@ -76,24 +77,16 @@ class TimerService : Service() {
         initialDuration = duration
         remainingSec = duration
         running = false
-        handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacks(finishRunnable)
         updateNotification()
     }
 
-    private val updateRunnable = object : Runnable {
-        override fun run() {
-            if (!running) return
-            remainingSec = ((endTime - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
-            if (remainingSec <= 0) {
-                running = false
-                updateNotification()
-                stopForeground(false)
-                stopSelf()
-            } else {
-                updateNotification()
-                handler.postDelayed(this, 1000)
-            }
-        }
+    private val finishRunnable = Runnable {
+        running = false
+        updateNotification()
+        showFinishNotification()
+        stopForeground(true)
+        stopSelf()
     }
 
     private fun updateNotification() {
@@ -105,10 +98,18 @@ class TimerService : Service() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(setName)
-            .setContentText("$timerName ${formatTime(remainingSec)}")
             .setOnlyAlertOnce(true)
             .setOngoing(running)
             .setStyle(MediaStyle())
+
+        if (running) {
+            builder.setContentText(timerName)
+                .setUsesChronometer(true)
+                .setWhen(endTime)
+                .setChronometerCountDown(true)
+        } else {
+            builder.setContentText("$timerName ${formatTime(remainingSec)}")
+        }
 
         val startIntent = Intent(this, TimerService::class.java).apply { action = ACTION_START }
         val startPi = PendingIntent.getService(this, 0, startIntent, PendingIntent.FLAG_UPDATE_CURRENT or flagImmutable())
@@ -129,6 +130,19 @@ class TimerService : Service() {
         return builder.build()
     }
 
+    private fun showFinishNotification() {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val builder = NotificationCompat.Builder(this, FINISH_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(setName)
+            .setContentText("$timerName 完了")
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+        nm.notify(FINISH_NOTIFICATION_ID, builder.build())
+    }
+
     private fun formatTime(sec: Int): String {
         val m = sec / 60
         val s = sec % 60
@@ -139,9 +153,11 @@ class TimerService : Service() {
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Timer", NotificationManager.IMPORTANCE_LOW)
             val nm = getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(channel)
+            val runChannel = NotificationChannel(CHANNEL_ID, "Timer", NotificationManager.IMPORTANCE_LOW)
+            nm.createNotificationChannel(runChannel)
+            val finishChannel = NotificationChannel(FINISH_CHANNEL_ID, "Timer Finished", NotificationManager.IMPORTANCE_HIGH)
+            nm.createNotificationChannel(finishChannel)
         }
     }
 
@@ -149,7 +165,9 @@ class TimerService : Service() {
 
     companion object {
         const val CHANNEL_ID = "timer_channel"
+        const val FINISH_CHANNEL_ID = "timer_finish_channel"
         const val NOTIFICATION_ID = 1
+        const val FINISH_NOTIFICATION_ID = 2
         const val ACTION_START = "com.example.tim.action.START"
         const val ACTION_STOP = "com.example.tim.action.STOP"
         const val ACTION_RESET = "com.example.tim.action.RESET"
