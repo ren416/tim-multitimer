@@ -18,7 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
-import * as IntentLauncher from 'expo-intent-launcher';
 import {
   initTimerNotification,
   registerTimerActionHandler,
@@ -486,16 +485,20 @@ export default function HomeScreen() {
     );
   };
 
-  const switchToNotification = () => {
+  const switchToNotification = async () => {
     const setName = selectedSet ? selectedSet.name : '"クイックタイマー"';
     const timerName = selectedSet
       ? selectedSet.timers[indexRef.current]?.label ?? ''
       : '';
-    updateTimerNotification(setName, timerName, remaining);
+    try {
+      await updateTimerNotification(setName, timerName, remaining);
+    } catch (e) {
+      console.warn('Failed to update notification', e);
+    }
     if (Platform.OS === 'android') {
       try {
         const IntentLauncher = require('expo-intent-launcher') as typeof import('expo-intent-launcher');
-        IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MAIN, {
+        await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MAIN, {
           category: IntentLauncher.ActivityCategory.HOME,
         });
       } catch (e) {

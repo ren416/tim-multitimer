@@ -11,6 +11,10 @@ let responseSub: Notifications.Subscription | null = null;
  * Ensure notification channel (Android) and category with actions are set up.
  */
 export const initTimerNotification = async (): Promise<void> => {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('timer', {
       name: 'Timer',
@@ -39,6 +43,8 @@ type Handlers = {
  * Listen for notification action presses and invoke the provided callbacks.
  */
 export const registerTimerActionHandler = (handlers: Handlers): void => {
+  if (Platform.OS === 'web') return;
+
   responseSub = Notifications.addNotificationResponseReceivedListener((resp) => {
     const action = resp.actionIdentifier;
     if (action === 'START') handlers.onStart();
@@ -51,6 +57,8 @@ export const registerTimerActionHandler = (handlers: Handlers): void => {
  * Remove notification action listener.
  */
 export const unregisterTimerActionHandler = (): void => {
+  if (Platform.OS === 'web') return;
+
   responseSub?.remove();
   responseSub = null;
 };
@@ -66,6 +74,10 @@ export const updateTimerNotification = async (
   timerName: string,
   remainingSec: number,
 ): Promise<void> => {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
   const body = `${timerName} 残り ${formatHMS(remainingSec)}`;
 
   if (currentNotificationId) {
@@ -95,6 +107,10 @@ export const updateTimerNotification = async (
  * Clear the persistent timer notification if present.
  */
 export const clearTimerNotification = async (): Promise<void> => {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
   if (currentNotificationId) {
     try {
       await Notifications.dismissNotificationAsync(currentNotificationId);
