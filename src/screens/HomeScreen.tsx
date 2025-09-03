@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  AppState,
 } from 'react-native';
 import { Colors } from '../constants/colors';
 import { useTimerState, Timer } from '../context/TimerContext';
@@ -45,6 +46,7 @@ export default function HomeScreen() {
   );
   const [running, setRunning] = useState(false);
   const runningRef = useRef(running);
+  const remainingRef = useRef(remaining);
   const [selectVisible, setSelectVisible] = useState(false);
   const [inputVisible, setInputVisible] = useState(false);
   const [quickDigits, setQuickDigits] = useState('');
@@ -99,8 +101,25 @@ export default function HomeScreen() {
   }, [running]);
 
   useEffect(() => {
+    remainingRef.current = remaining;
+  }, [remaining]);
+
+  useEffect(() => {
     historyRef.current = { id: historyId, total: totalSec, run: runCount };
   }, [historyId, totalSec, runCount]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if ((state === 'background' || state === 'inactive') && runningRef.current) {
+        const setName = selectedSet ? selectedSet.name : '"クイックタイマー"';
+        const timerName = selectedSet
+          ? selectedSet.timers[indexRef.current]?.label ?? ''
+          : '';
+        updateTimerNotification(setName, timerName, remainingRef.current);
+      }
+    });
+    return () => sub.remove();
+  }, [selectedSet]);
 
   const totalDuration = useMemo(() => {
     if (selectedSet) {
@@ -485,28 +504,6 @@ export default function HomeScreen() {
     );
   };
 
-  const switchToNotification = async () => {
-    const setName = selectedSet ? selectedSet.name : '"クイックタイマー"';
-    const timerName = selectedSet
-      ? selectedSet.timers[indexRef.current]?.label ?? ''
-      : '';
-    try {
-      await updateTimerNotification(setName, timerName, remaining);
-    } catch (e) {
-      console.warn('Failed to update notification', e);
-    }
-    if (Platform.OS === 'android') {
-      try {
-        const IntentLauncher = require('expo-intent-launcher') as typeof import('expo-intent-launcher');
-        await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MAIN, {
-          category: IntentLauncher.ActivityCategory.HOME,
-        });
-      } catch (e) {
-        console.warn('IntentLauncher unavailable', e);
-      }
-    }
-  };
-
   // 実行中のタイマーや入力値をリセット
   const reset = () => {
     stop();
@@ -640,9 +637,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.card, styles.timerCard]}>
-          <Pressable style={styles.notificationBtn} onPress={switchToNotification}>
-            <Ionicons name="open-outline" size={20} color={Colors.text} />
-          </Pressable>
           {selectedSet ? (
             <>
               <Text style={styles.infoText}>{`タイマーセット名：${selectedSet.name}`}</Text>
@@ -945,12 +939,6 @@ const styles = StyleSheet.create({
   modalTimerText: { color: Colors.subText, fontSize: 12 },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
   hiddenInput: { height: 0, width: 0 },
-  notificationBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 4,
-  },
   timerCard: { marginTop: 20, alignItems: 'center', flex: 1 },
 });
 
