@@ -4,11 +4,11 @@
     "slug": "tim-multitimer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": ".\\assets\\icon.fixed.png",
+    "icon": "./assets/icon.fixed.png",
     "scheme": "tim",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": ".\\assets\\splash.fixed.png",
+      "image": "./assets/splash.fixed.png",
       "resizeMode": "contain",
       "backgroundColor": "#F0FAFF"
     },
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": ".\\assets\\adaptive-icon.fixed.png",
+        "foregroundImage": "./assets/adaptive-icon.fixed.png",
         "backgroundColor": "#F0FAFF"
       },
       "package": "com.example.tim"
