@@ -1,24 +1,18 @@
 {
   "compilerOptions": {
-    "target": "es2017",
-    "lib": [
-      "dom",
-      "es2017"
-    ],
-    "jsx": "react-native",
-    "moduleResolution": "node",
+    "target": "esnext",
+    "lib": ["dom", "esnext"],
+    "jsx": "react-jsx",               // Expo SDK 53 以降は "react-jsx" が推奨
+    "moduleResolution": "bundler",    // ★ 重要: customConditions を使う場合は必須
+    "customConditions": ["react-native"],
+
     "allowJs": true,
     "skipLibCheck": true,
     "noEmit": true,
     "resolveJsonModule": true,
-    "strict": false,
-    "types": [
-      "react",
-      "react-native"
-    ]
+    "strict": true,                   // 型安全のため true 推奨
+    "types": ["react", "react-native"]
   },
-  "exclude": [
-    "node_modules"
-  ],
+  "exclude": ["node_modules"],
   "extends": "expo/tsconfig.base"
 }
