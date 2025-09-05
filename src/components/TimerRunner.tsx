@@ -6,7 +6,7 @@ import { formatHMS } from '../utils/format';
 import { Audio } from 'expo-av';
 import { useTimerState } from '../context/TimerContext';
 import { SOUND_FILES } from '../constants/sounds';
-import { scheduleEndNotification } from '../utils/notifications';
+import { scheduleEndNotification, cancelTimerSetNotification } from '../utils/notifications';
 import {
   initTimerNotification,
   registerTimerActionHandler,
@@ -47,6 +47,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const remainingRef = useRef(remaining);              // 最新の残り秒数を保持
   const soundRef = useRef<Audio.Sound | null>(null);      // 終了時に鳴らすサウンド
   const notifySoundRef = useRef<Audio.Sound | null>(null); // 区切りの通知音
+  const scheduledIdsRef = useRef<string[]>([]);             // 予約した通知IDの保持
 
   const totalCount = timerSet.timers.length; // タイマーの総数
   const current = timerSet.timers[index];    // 現在のタイマー
@@ -170,14 +171,34 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   }, [running]);
 
   /**
+   * 各タイマー終了通知をまとめてスケジュールする。
+   * セット開始時に一度だけ呼び出す。
+   */
+  const scheduleAllNotifications = async (): Promise<void> => {
+    if (!state.settings.enableNotifications) {
+      return;
+    }
+    let total = 0;
+    const ids: string[] = [];
+    for (let i = 0; i < timerSet.timers.length; i++) {
+      const t = timerSet.timers[i];
+      const d = getDuration(t);
+      total += d;
+      if (t?.notify === false) continue;
+      const isLast = i === timerSet.timers.length - 1;
+      const id = await scheduleEndNotification(total, t, isLast);
+      if (id) ids.push(id);
+    }
+    scheduledIdsRef.current = ids;
+  };
+
+  /**
    * 現在のタイマーを開始し1秒ごとのカウントダウンをセットする。
-   * 通知設定が有効なら終了通知も予約する。
    */
   const start = () => {
     const curr = timerSet.timers[indexRef.current];
     if (!curr) return;
     const duration = getDuration(curr);
-    const isLast = indexRef.current + 1 >= totalCount;
     setRunning(true);
     remainingRef.current = duration;
     setRemaining(duration);
@@ -185,12 +206,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     try { soundRef.current?.stopAsync(); } catch {}
     setupInterval();
     updateTimerNotification(timerSet.name, curr.label ?? '', duration);
-    if (
-      state.settings.enableNotifications &&
-      timerSet.notifications?.enabled &&
-      curr?.notify !== false
-    ) {
-      scheduleEndNotification(duration, curr, isLast);
+    if (indexRef.current === 0 && scheduledIdsRef.current.length === 0) {
+      // セット開始時に全通知を予約
+      scheduleAllNotifications();
     }
   };
 
@@ -255,6 +273,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     } else {
       setRunning(false);
       clearTimerNotification();
+      cancelTimerSetNotification(scheduledIdsRef.current);
+      scheduledIdsRef.current = [];
       onFinish?.();
     }
   };
@@ -290,6 +310,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     try { soundRef.current?.stopAsync(); } catch {}
     try { notifySoundRef.current?.stopAsync(); } catch {}
     clearTimerNotification();
+    cancelTimerSetNotification(scheduledIdsRef.current);
+    scheduledIdsRef.current = [];
     onCancel?.();
   };
 
@@ -304,6 +326,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     return () => {
       unregisterTimerActionHandler();
       clearTimerNotification();
+      cancelTimerSetNotification(scheduledIdsRef.current);
+      scheduledIdsRef.current = [];
     };
   }, []);
 
