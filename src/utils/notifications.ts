@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import dayjs from 'dayjs';
+import { Platform } from 'react-native';
 import { Timer, TimerSet, NotificationConfig, RepeatIntervalUnit } from '../context/TimerContext';
 
 // Expo の通知機能を用いてタイマー終了や予約通知をスケジュールするためのヘルパー群
@@ -45,13 +46,27 @@ export const scheduleEndNotification = async (
   withSound: boolean = true,
 ): Promise<string | null> => {
   try {
-    await Notifications.requestPermissionsAsync();
+    if (!(await ensurePermissions())) return null;
+
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('timer', {
+        name: 'Timer',
+        importance: Notifications.AndroidImportance.HIGH,
+        bypassDnd: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+    }
+
     const id = await Notifications.scheduleNotificationAsync({
       content: {
         title: 'タイマー終了',
         body: `${timer?.label ?? 'タイマー'} が終了しました`,
         sound: withSound ? true : undefined,
-      },
+        android: {
+          channelId: 'timer',
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        },
+      } as any,
       trigger: {
         seconds: sec,
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

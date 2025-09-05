@@ -175,9 +175,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
    * セット開始時に一度だけ呼び出す。
    */
   const scheduleAllNotifications = async (): Promise<void> => {
-    if (
-      !(state.settings.enableNotifications && timerSet.notifications?.enabled)
-    ) {
+    if (!state.settings.enableNotifications) {
       return;
     }
     let total = 0;
