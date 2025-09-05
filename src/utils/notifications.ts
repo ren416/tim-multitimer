@@ -43,10 +43,10 @@ export const scheduleEndNotification = async (
   sec: number,
   timer?: Timer,
   withSound: boolean = true,
-): Promise<void> => {
+): Promise<string | null> => {
   try {
     await Notifications.requestPermissionsAsync();
-    await Notifications.scheduleNotificationAsync({
+    const id = await Notifications.scheduleNotificationAsync({
       content: {
         title: 'タイマー終了',
         body: `${timer?.label ?? 'タイマー'} が終了しました`,
@@ -55,10 +55,12 @@ export const scheduleEndNotification = async (
       trigger: {
         seconds: sec,
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      }
+      },
     });
-  } catch(e) {
+    return id;
+  } catch (e) {
     console.warn('Notification schedule failed', e);
+    return null;
   }
 };
 
