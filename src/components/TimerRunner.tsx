@@ -50,8 +50,6 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const scheduledIdsRef = useRef<string[]>([]);             // 予約した通知IDの保持
   const totalSetMsRef = useRef(0);                          // タイマーセット全体の総時間(ms)
   const setEndAtRef = useRef<number | null>(null);          // タイマーセット全体の終了予定時刻
-  const backgroundStartRef = useRef<number | null>(null);   // バックグラウンドに移行した時刻
-  const elapsedBeforeBgRef = useRef(0);                     // バックグラウンド移行前までの経過時間(ms)
 
   const totalCount = timerSet.timers.length; // タイマーの総数
   const current = timerSet.timers[index];    // 現在のタイマー
@@ -179,27 +177,27 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   // バックグラウンドから復帰した際に経過時間を補正
   const handleAppActive = (): void => {
-    if (!running || backgroundStartRef.current == null) return;
+    if (!running || setEndAtRef.current == null) return;
     const now = Date.now();
-    const backgroundElapsed = now - backgroundStartRef.current;
-    const elapsedMs = elapsedBeforeBgRef.current + backgroundElapsed;
+    const totalRemainMs = setEndAtRef.current - now;
 
-    if (elapsedMs >= totalSetMsRef.current) {
+    if (totalRemainMs <= 0) {
       // セット全体が終了している場合
       setIndex(totalCount - 1);
       indexRef.current = totalCount - 1;
       setRunning(false);
       remainingRef.current = 0;
       setRemaining(0);
+      endAtRef.current = null;
+      setEndAtRef.current = null;
       clearTimerNotification();
       cancelTimerSetNotification(scheduledIdsRef.current);
       scheduledIdsRef.current = [];
       onFinish?.();
-      backgroundStartRef.current = null;
-      elapsedBeforeBgRef.current = 0;
       return;
     }
 
+    const elapsedMs = totalSetMsRef.current - totalRemainMs;
     let elapsed = elapsedMs;
     let idx = 0;
     while (idx < totalCount) {
@@ -215,12 +213,12 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       setRunning(false);
       remainingRef.current = 0;
       setRemaining(0);
+      endAtRef.current = null;
+      setEndAtRef.current = null;
       clearTimerNotification();
       cancelTimerSetNotification(scheduledIdsRef.current);
       scheduledIdsRef.current = [];
       onFinish?.();
-      backgroundStartRef.current = null;
-      elapsedBeforeBgRef.current = 0;
       return;
     }
 
@@ -232,22 +230,15 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     remainingRef.current = remainSec;
     setRemaining(remainSec);
     endAtRef.current = now + remainMs;
-    setEndAtRef.current = now + (totalSetMsRef.current - elapsedMs);
+    setEndAtRef.current = now + totalRemainMs;
     setupInterval();
     updateTimerNotification(timerSet.name, timerSet.timers[idx]?.label ?? '', remainSec);
-    backgroundStartRef.current = null;
-    elapsedBeforeBgRef.current = elapsedMs;
   };
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         handleAppActive();
-      } else if (state === 'background' || state === 'inactive') {
-        if (running) {
-          backgroundStartRef.current = Date.now();
-          elapsedBeforeBgRef.current = totalSetMsRef.current - calcRemainingSetMs();
-        }
       }
     });
     return () => sub.remove();
