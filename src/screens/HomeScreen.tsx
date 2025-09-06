@@ -20,6 +20,10 @@ import Svg, { Circle, G } from 'react-native-svg';
 import { SOUND_OPTIONS, SOUND_FILES } from '../constants/sounds';
 import { Audio } from 'expo-av';
 import {
+  scheduleEndNotification,
+  cancelTimerSetNotification,
+} from '../utils/notifications';
+import {
   initTimerNotification,
   registerTimerActionHandler,
   unregisterTimerActionHandler,
@@ -59,6 +63,7 @@ export default function HomeScreen() {
   const [runCount, setRunCount] = useState(0);
   const [totalSec, setTotalSec] = useState(0);
   const historyRef = useRef({ id: historyId, total: totalSec, run: runCount });
+  const scheduledIdsRef = useRef<string[]>([]);
   const [modeIndex, setModeIndex] = useState(0);
   const [quickInitial, setQuickInitial] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -116,6 +121,18 @@ export default function HomeScreen() {
           ? selectedSet.timers[indexRef.current]?.label ?? ''
           : '';
         updateTimerNotification(setName, timerName, remainingRef.current);
+      } else if (state === 'active' && runningRef.current && endTimeRef.current != null) {
+        const remain = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
+        remainingRef.current = remain;
+        setRemaining(remain);
+        const setName = selectedSet ? selectedSet.name : '"クイックタイマー"';
+        const timerName = selectedSet
+          ? selectedSet.timers[indexRef.current]?.label ?? ''
+          : '';
+        updateTimerNotification(setName, timerName, remain);
+        if (remain <= 0 && selectedSet) {
+          endOne();
+        }
       }
     });
     return () => sub.remove();
@@ -319,6 +336,8 @@ export default function HomeScreen() {
       clearTimeout(nextTimeoutRef.current);
       nextTimeoutRef.current = null;
     }
+    cancelTimerSetNotification(scheduledIdsRef.current);
+    scheduledIdsRef.current = [];
   }, [selectedSet]);
 
   useEffect(() => {
@@ -332,6 +351,8 @@ export default function HomeScreen() {
           payload: { id, cancelled: true, totalDurationSec: total, timersRun: run },
         });
       }
+      cancelTimerSetNotification(scheduledIdsRef.current);
+      scheduledIdsRef.current = [];
     };
   }, [dispatch]);
 
@@ -394,6 +415,25 @@ export default function HomeScreen() {
     setInputVisible(false);
   };
 
+  // 各タイマー終了時の通知をまとめてスケジュール
+  const scheduleAllNotifications = async (): Promise<void> => {
+    if (!state.settings.enableNotifications || !selectedSet) {
+      return;
+    }
+    let total = 0;
+    const ids: string[] = [];
+    for (let i = 0; i < selectedSet.timers.length; i++) {
+      const t = selectedSet.timers[i];
+      const d = getDuration(t);
+      total += d;
+      if (t?.notify === false) continue;
+      const isLast = i === selectedSet.timers.length - 1;
+      const id = await scheduleEndNotification(total, t, isLast);
+      if (id) ids.push(id);
+    }
+    scheduledIdsRef.current = ids;
+  };
+
   // タイマーのカウントダウンを開始
   const start = (initParam?: number | unknown) => {
     setShowReset(false);
@@ -439,6 +479,9 @@ export default function HomeScreen() {
       selectedSet ? selectedSet.timers[indexRef.current]?.label ?? '' : '',
       rem,
     );
+    if (selectedSet && indexRef.current === 0 && scheduledIdsRef.current.length === 0) {
+      scheduleAllNotifications();
+    }
     intervalRef.current = setInterval(() => {
       if (endTimeRef.current == null) return;
       const left = Math.ceil((endTimeRef.current - Date.now()) / 1000);
@@ -478,6 +521,8 @@ export default function HomeScreen() {
     return () => {
       unregisterTimerActionHandler();
       clearTimerNotification();
+      cancelTimerSetNotification(scheduledIdsRef.current);
+      scheduledIdsRef.current = [];
     };
   }, []);
 
@@ -502,6 +547,8 @@ export default function HomeScreen() {
       selectedSet ? selectedSet.timers[indexRef.current]?.label ?? '' : '',
       remaining,
     );
+    cancelTimerSetNotification(scheduledIdsRef.current);
+    scheduledIdsRef.current = [];
   };
 
   // 実行中のタイマーや入力値をリセット
@@ -531,6 +578,8 @@ export default function HomeScreen() {
       setQuickInitial(0);
     }
     clearTimerNotification();
+    cancelTimerSetNotification(scheduledIdsRef.current);
+    scheduledIdsRef.current = [];
   };
 
 
@@ -607,6 +656,8 @@ export default function HomeScreen() {
         setTotalSec(0);
       }
       clearTimerNotification();
+      cancelTimerSetNotification(scheduledIdsRef.current);
+      scheduledIdsRef.current = [];
     }
   };
 
