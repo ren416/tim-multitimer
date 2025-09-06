@@ -76,6 +76,7 @@ export default function HomeScreen() {
 
   const elapsedRef = useRef(0);
   const lastUpdateRef = useRef(Date.now());
+  const runStartRef = useRef<number | null>(null);
   const selectedSet = useMemo(
     () => state.timerSets.find(s => s.id === selectedId) ?? null,
     [selectedId, state.timerSets]
@@ -115,62 +116,92 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const handleActive = () => {
-      if (!runningRef.current || !selectedSet || endTimeRef.current == null) return;
+      if (!runningRef.current || runStartRef.current == null) return;
       const now = Date.now();
-      // 経過秒数を算出
-      const diffSec = (now - lastUpdateRef.current) / 1000;
-      let elapsedSec = elapsedRef.current + diffSec;
-      const durations = selectedSet.timers.map(t => getDuration(t));
-      const total = durations.reduce((sum, d) => sum + d, 0);
-      if (elapsedSec >= total) {
-        // セット全体が終了している場合
-        setIndex(durations.length - 1);
-        indexRef.current = durations.length - 1;
-        setRemaining(0);
-        remainingRef.current = 0;
-        endTimeRef.current = null;
-        setRunning(false);
-        runningRef.current = false;
-        setShowReset(true);
-        updateTimerNotification(selectedSet.name, selectedSet.timers[durations.length - 1]?.label ?? '', 0);
-        clearTimerNotification();
-        cancelTimerSetNotification(scheduledIdsRef.current);
-        scheduledIdsRef.current = [];
-        if (historyId) {
-          dispatch({
-            type: 'LOG_COMPLETE',
-            payload: {
-              id: historyId,
-              totalDurationSec: total,
-              timersRun: durations.length,
-            },
-          });
-          setHistoryId(null);
-          setRunCount(durations.length);
-          setTotalSec(total);
-        }
-        return;
-      }
+      let elapsedSec = (now - runStartRef.current) / 1000;
 
-      // 経過時間から現在のタイマーと残り時間を算出
-      let idx = 0;
-      let past = 0;
-      while (idx < durations.length && elapsedSec >= durations[idx]) {
-        elapsedSec -= durations[idx];
-        past += durations[idx];
-        idx++;
+      if (selectedSet) {
+        const durations = selectedSet.timers.map(t => getDuration(t));
+        const total = durations.reduce((sum, d) => sum + d, 0);
+        if (elapsedSec >= total) {
+          // セット全体が終了している場合
+          setIndex(durations.length - 1);
+          indexRef.current = durations.length - 1;
+          setRemaining(0);
+          remainingRef.current = 0;
+          endTimeRef.current = null;
+          runStartRef.current = null;
+          setRunning(false);
+          runningRef.current = false;
+          setShowReset(true);
+          updateTimerNotification(
+            selectedSet.name,
+            selectedSet.timers[durations.length - 1]?.label ?? '',
+            0,
+          );
+          clearTimerNotification();
+          cancelTimerSetNotification(scheduledIdsRef.current);
+          scheduledIdsRef.current = [];
+          if (historyId) {
+            dispatch({
+              type: 'LOG_COMPLETE',
+              payload: {
+                id: historyId,
+                totalDurationSec: total,
+                timersRun: durations.length,
+              },
+            });
+            setHistoryId(null);
+            setRunCount(durations.length);
+            setTotalSec(total);
+          }
+          return;
+        }
+
+        // 経過時間から現在のタイマーと残り時間を算出
+        let idx = 0;
+        let past = 0;
+        while (idx < durations.length && elapsedSec >= durations[idx]) {
+          elapsedSec -= durations[idx];
+          past += durations[idx];
+          idx++;
+        }
+        const remain = Math.max(0, Math.round(durations[idx] - elapsedSec));
+        setIndex(idx);
+        indexRef.current = idx;
+        setRemaining(remain);
+        remainingRef.current = remain;
+        endTimeRef.current = now + remain * 1000;
+        lastUpdateRef.current = now;
+        elapsedRef.current = past + (durations[idx] - remain);
+        setRunCount(idx);
+        setTotalSec(past);
+        updateTimerNotification(
+          selectedSet.name,
+          selectedSet.timers[idx]?.label ?? '',
+          remain,
+        );
+      } else {
+        const remain = Math.max(
+          0,
+          Math.round(quickInitial - elapsedSec),
+        );
+        setRemaining(remain);
+        remainingRef.current = remain;
+        if (remain <= 0) {
+          endTimeRef.current = null;
+          runStartRef.current = null;
+          setRunning(false);
+          runningRef.current = false;
+          setShowReset(true);
+          clearTimerNotification();
+        } else {
+          endTimeRef.current = now + remain * 1000;
+          lastUpdateRef.current = now;
+          elapsedRef.current = quickInitial - remain;
+          updateTimerNotification('"クイックタイマー"', '', remain);
+        }
       }
-      const remain = Math.max(0, Math.round(durations[idx] - elapsedSec));
-      setIndex(idx);
-      indexRef.current = idx;
-      setRemaining(remain);
-      remainingRef.current = remain;
-      endTimeRef.current = now + remain * 1000;
-      lastUpdateRef.current = now;
-      elapsedRef.current = past + (durations[idx] - remain);
-      setRunCount(idx);
-      setTotalSec(past);
-      updateTimerNotification(selectedSet.name, selectedSet.timers[idx]?.label ?? '', remain);
     };
 
     const sub = AppState.addEventListener('change', state => {
@@ -402,6 +433,7 @@ export default function HomeScreen() {
       }
       cancelTimerSetNotification(scheduledIdsRef.current);
       scheduledIdsRef.current = [];
+      runStartRef.current = null;
     };
   }, [dispatch]);
 
@@ -494,6 +526,9 @@ export default function HomeScreen() {
     let rem = Number.isFinite(init ?? remaining) ? Math.max(0, init ?? remaining) : 0;
     soundRef.current?.stopAsync().catch(() => {});
     setSoundPlaying(false);
+    if (runStartRef.current == null) {
+      runStartRef.current = Date.now() - elapsedRef.current * 1000;
+    }
     if (selectedSet && !historyId) {
       const id = uuidv4();
       dispatch({ type: 'LOG_START', payload: { id, timerSetId: selectedSet.id } });
@@ -586,6 +621,7 @@ export default function HomeScreen() {
       nextTimeoutRef.current = null;
     }
     endTimeRef.current = null;
+    runStartRef.current = null;
     setRunning(false);
     soundRef.current?.stopAsync().catch(() => {});
     notifySoundRef.current?.stopAsync().catch(() => {});
@@ -707,21 +743,23 @@ export default function HomeScreen() {
       clearTimerNotification();
       cancelTimerSetNotification(scheduledIdsRef.current);
       scheduledIdsRef.current = [];
+      runStartRef.current = null;
     }
   };
 
   useEffect(() => {
     if (remaining === 0 && running) {
-    if (selectedSet) {
-      endOne();
-    } else {
-      setRunning(false);
-      soundRef.current?.replayAsync().catch(() => {});
-      setShowReset(true);
-      clearTimerNotification();
+      if (selectedSet) {
+        endOne();
+      } else {
+        setRunning(false);
+        soundRef.current?.replayAsync().catch(() => {});
+        setShowReset(true);
+        clearTimerNotification();
+        runStartRef.current = null;
+      }
     }
-  }
-}, [remaining, running, selectedSet]);
+  }, [remaining, running, selectedSet]);
 
   return (
     <>
