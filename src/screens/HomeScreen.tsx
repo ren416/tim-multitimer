@@ -604,9 +604,11 @@ export default function HomeScreen() {
     });
     return () => {
       unregisterTimerActionHandler();
-      clearTimerNotification();
-      cancelTimerSetNotification(scheduledIdsRef.current);
-      scheduledIdsRef.current = [];
+      if (!runningRef.current) {
+        clearTimerNotification();
+        cancelTimerSetNotification(scheduledIdsRef.current);
+        scheduledIdsRef.current = [];
+      }
     };
   }, []);
 
