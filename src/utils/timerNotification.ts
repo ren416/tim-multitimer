@@ -91,7 +91,7 @@ export const updateTimerNotification = async (
       title: setName,
       body,
       categoryIdentifier: 'TIMER_CONTROLS',
-      sound: null,
+      sound: false,
       android: {
         channelId: 'timer',
         priority: Notifications.AndroidNotificationPriority.MAX,

@@ -57,16 +57,21 @@ export const scheduleEndNotification = async (
       });
     }
 
+    const content: Notifications.NotificationContentInput = {
+      title: 'タイマー終了',
+      body: `${timer?.label ?? 'タイマー'} が終了しました`,
+      android: {
+        channelId: 'timer',
+        priority: Notifications.AndroidNotificationPriority.MAX,
+      },
+    } as any;
+
+    if (withSound) {
+      (content as any).sound = true;
+    }
+
     const id = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'タイマー終了',
-        body: `${timer?.label ?? 'タイマー'} が終了しました`,
-        sound: withSound ? true : undefined,
-        android: {
-          channelId: 'timer',
-          priority: Notifications.AndroidNotificationPriority.MAX,
-        },
-      } as any,
+      content,
       trigger: {
         seconds: sec,
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
