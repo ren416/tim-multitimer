@@ -153,22 +153,60 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }, 1000);
   };
 
-  // バックグラウンドから復帰した際に残り時間を補正
+  // バックグラウンドから復帰した際に経過時間を補正
+  const handleAppActive = (): void => {
+    if (!running || endAtRef.current == null) return;
+    const now = Date.now();
+    // 現在のタイマー終了予定時刻との差分を計算
+    let diff = now - endAtRef.current;
+    if (diff < 0) {
+      // まだタイマーが残っている場合は残り時間を再計算して再開
+      const remain = Math.max(0, Math.round(-diff / 1000));
+      remainingRef.current = remain;
+      setRemaining(remain);
+      setupInterval();
+      return;
+    }
+    // 経過時間が現在のタイマーを超えている場合は次のタイマーへ進める
+    let idx = indexRef.current + 1;
+    while (idx < totalCount && diff >= getDuration(timerSet.timers[idx]) * 1000) {
+      diff -= getDuration(timerSet.timers[idx]) * 1000;
+      idx++;
+    }
+    if (idx >= totalCount) {
+      // すべてのタイマーが終了していた場合は完了処理を実行
+      setIndex(totalCount - 1);
+      indexRef.current = totalCount - 1;
+      setRunning(false);
+      remainingRef.current = 0;
+      setRemaining(0);
+      clearTimerNotification();
+      cancelTimerSetNotification(scheduledIdsRef.current);
+      scheduledIdsRef.current = [];
+      onFinish?.();
+      return;
+    }
+    // 中途のタイマーから再開
+    setIndex(idx);
+    indexRef.current = idx;
+    const dMs = getDuration(timerSet.timers[idx]) * 1000;
+    const remainMs = dMs - diff;
+    const remainSec = Math.max(0, Math.round(remainMs / 1000));
+    remainingRef.current = remainSec;
+    setRemaining(remainSec);
+    endAtRef.current = now + remainMs;
+    setupInterval();
+    updateTimerNotification(timerSet.name, timerSet.timers[idx].label ?? '', remainSec);
+  };
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && running && endAtRef.current != null) {
-        const remain = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
-        remainingRef.current = remain;
-        setRemaining(remain);
-        setupInterval();
-        if (remain <= 0) {
-          clearInterval(intervalRef.current!);
-          endOne();
-        }
+      if (state === 'active') {
+        handleAppActive();
       }
     });
     return () => sub.remove();
-  }, [running]);
+  }, [running, timerSet]);
 
   /**
    * 各タイマー終了通知をまとめてスケジュールする。
