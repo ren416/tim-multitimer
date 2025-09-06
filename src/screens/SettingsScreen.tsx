@@ -18,7 +18,9 @@ export default function SettingsScreen({ navigation }: any) {
           <Text style={styles.label}>通知を有効化</Text>
           <Switch
             value={state.settings.enableNotifications}
-            onValueChange={v => dispatch({ type: 'UPDATE_SETTINGS', payload: { enableNotifications: v } })}
+            onValueChange={(v: boolean) =>
+              dispatch({ type: 'UPDATE_SETTINGS', payload: { enableNotifications: v } })
+            }
           />
         </View>
         <View style={{ marginTop: 12 }}>
@@ -26,7 +28,7 @@ export default function SettingsScreen({ navigation }: any) {
           <Slider
             style={{ marginTop: 8 }}
             value={state.settings.notificationVolume}
-            onValueChange={v =>
+            onValueChange={(v: number) =>
               dispatch({ type: 'UPDATE_SETTINGS', payload: { notificationVolume: v } })
             }
             minimumValue={0}
