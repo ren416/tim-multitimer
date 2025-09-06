@@ -114,6 +114,65 @@ export default function HomeScreen() {
   }, [historyId, totalSec, runCount]);
 
   useEffect(() => {
+    const handleActive = () => {
+      if (!runningRef.current || !selectedSet || endTimeRef.current == null) return;
+      const now = Date.now();
+      // 経過秒数を算出
+      const diffSec = (now - lastUpdateRef.current) / 1000;
+      let elapsedSec = elapsedRef.current + diffSec;
+      const durations = selectedSet.timers.map(t => getDuration(t));
+      const total = durations.reduce((sum, d) => sum + d, 0);
+      if (elapsedSec >= total) {
+        // セット全体が終了している場合
+        setIndex(durations.length - 1);
+        indexRef.current = durations.length - 1;
+        setRemaining(0);
+        remainingRef.current = 0;
+        endTimeRef.current = null;
+        setRunning(false);
+        runningRef.current = false;
+        setShowReset(true);
+        updateTimerNotification(selectedSet.name, selectedSet.timers[durations.length - 1]?.label ?? '', 0);
+        clearTimerNotification();
+        cancelTimerSetNotification(scheduledIdsRef.current);
+        scheduledIdsRef.current = [];
+        if (historyId) {
+          dispatch({
+            type: 'LOG_COMPLETE',
+            payload: {
+              id: historyId,
+              totalDurationSec: total,
+              timersRun: durations.length,
+            },
+          });
+          setHistoryId(null);
+          setRunCount(durations.length);
+          setTotalSec(total);
+        }
+        return;
+      }
+
+      // 経過時間から現在のタイマーと残り時間を算出
+      let idx = 0;
+      let past = 0;
+      while (idx < durations.length && elapsedSec >= durations[idx]) {
+        elapsedSec -= durations[idx];
+        past += durations[idx];
+        idx++;
+      }
+      const remain = Math.max(0, Math.round(durations[idx] - elapsedSec));
+      setIndex(idx);
+      indexRef.current = idx;
+      setRemaining(remain);
+      remainingRef.current = remain;
+      endTimeRef.current = now + remain * 1000;
+      lastUpdateRef.current = now;
+      elapsedRef.current = past + (durations[idx] - remain);
+      setRunCount(idx);
+      setTotalSec(past);
+      updateTimerNotification(selectedSet.name, selectedSet.timers[idx]?.label ?? '', remain);
+    };
+
     const sub = AppState.addEventListener('change', state => {
       if ((state === 'background' || state === 'inactive') && runningRef.current) {
         const setName = selectedSet ? selectedSet.name : '"クイックタイマー"';
@@ -121,22 +180,12 @@ export default function HomeScreen() {
           ? selectedSet.timers[indexRef.current]?.label ?? ''
           : '';
         updateTimerNotification(setName, timerName, remainingRef.current);
-      } else if (state === 'active' && runningRef.current && endTimeRef.current != null) {
-        const remain = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
-        remainingRef.current = remain;
-        setRemaining(remain);
-        const setName = selectedSet ? selectedSet.name : '"クイックタイマー"';
-        const timerName = selectedSet
-          ? selectedSet.timers[indexRef.current]?.label ?? ''
-          : '';
-        updateTimerNotification(setName, timerName, remain);
-        if (remain <= 0 && selectedSet) {
-          endOne();
-        }
+      } else if (state === 'active') {
+        handleActive();
       }
     });
     return () => sub.remove();
-  }, [selectedSet]);
+  }, [selectedSet, historyId, dispatch]);
 
   const totalDuration = useMemo(() => {
     if (selectedSet) {
