@@ -2,13 +2,15 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { formatHMS } from './format';
 
-// Manage showing a single persistent notification with timer controls.
+// タイマーの進行状況を常駐通知として表示し、
+// 通知から開始・停止・リセットを行えるようにするユーティリティ。
 
 let currentNotificationId: string | null = null;
 let responseSub: Notifications.Subscription | null = null;
 
 /**
- * Ensure notification channel (Android) and category with actions are set up.
+ * 通知チャンネル（Android）や通知アクションのカテゴリを登録する。
+ * 初期化時に一度だけ呼び出す。
  */
 export const initTimerNotification = async (): Promise<void> => {
   if (Platform.OS === 'web') {
@@ -33,14 +35,15 @@ export const initTimerNotification = async (): Promise<void> => {
   ]);
 };
 
+// 通知からの操作に対応するコールバック群
 type Handlers = {
-  onStart: () => void;
-  onPause: () => void;
-  onReset: () => void;
+  onStart: () => void; // 開始ボタン押下時
+  onPause: () => void; // 停止ボタン押下時
+  onReset: () => void; // リセットボタン押下時
 };
 
 /**
- * Listen for notification action presses and invoke the provided callbacks.
+ * 通知上のアクションが押された際にコールバックを実行するリスナーを登録する。
  */
 export const registerTimerActionHandler = (handlers: Handlers): void => {
   if (Platform.OS === 'web') return;
@@ -54,7 +57,7 @@ export const registerTimerActionHandler = (handlers: Handlers): void => {
 };
 
 /**
- * Remove notification action listener.
+ * 通知アクションのリスナーを解除する。
  */
 export const unregisterTimerActionHandler = (): void => {
   if (Platform.OS === 'web') return;
@@ -64,10 +67,10 @@ export const unregisterTimerActionHandler = (): void => {
 };
 
 /**
- * Show or update the persistent timer notification.
- * @param setName Name of the timer set
- * @param timerName Name of the current timer
- * @param remainingSec Remaining seconds for the timer
+ * 常駐通知を表示または更新する。
+ * @param setName タイマーセット名
+ * @param timerName 現在のタイマー名
+ * @param remainingSec 残り秒数
  */
 export const updateTimerNotification = async (
   setName: string,
@@ -104,7 +107,7 @@ export const updateTimerNotification = async (
 };
 
 /**
- * Clear the persistent timer notification if present.
+ * 表示中の常駐通知をクリアする。
  */
 export const clearTimerNotification = async (): Promise<void> => {
   if (Platform.OS === 'web') {

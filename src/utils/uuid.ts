@@ -5,7 +5,7 @@
  */
 export function uuidv4(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
+    const r = Math.random() * 16 | 0; // 暗号的な強度は求めていない簡易乱数
     // y 部分は RFC4122 の仕様に従い 8,9,A,B のいずれかとなる
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);

@@ -5,10 +5,14 @@ import { Colors } from '../constants/colors';
 // タイマーの個別設定を入力するフォームコンポーネント。
 // ラベル・時間・メモを入力し、親コンポーネントへ変更を通知する。
 
+/**
+ * フォームコンポーネントに渡されるプロパティ。
+ * value で初期値を指定し、onChange で変更を親へ伝える。
+ */
 type Props = {
-  value?: { label: string; durationSec: number; note?: string };
-  onChange: (v: {label: string; durationSec: number; note?: string}) => void;
-  onRemove?: () => void;
+  value?: { label: string; durationSec: number; note?: string }; // 現在の値
+  onChange: (v: {label: string; durationSec: number; note?: string}) => void; // 入力が変化した際の通知
+  onRemove?: () => void; // フォームを削除するトリガー
 };
 
 export default function TimerItemForm({ value, onChange, onRemove }: Props) {

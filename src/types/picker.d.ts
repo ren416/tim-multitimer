@@ -1,4 +1,5 @@
 // Picker コンポーネントの簡易型宣言
+// 公式型定義に含まれていないため、必要な範囲だけ定義する
 declare module '@react-native-picker/picker' {
   import * as React from 'react';
   export interface PickerProps {

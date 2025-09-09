@@ -11,7 +11,7 @@ const unitSeconds: Record<RepeatIntervalUnit, number> = {
   hour: 3600,
   day: 86400,
   week: 7 * 86400,
-  year: 365 * 86400,
+  year: 365 * 86400, // うるう年は考慮しない簡易計算
 };
 
 /**

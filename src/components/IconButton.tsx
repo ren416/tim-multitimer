@@ -6,7 +6,11 @@ import { Colors } from '../constants/colors'; // 共通で利用するカラー�
 // アイコンとラベルを組み合わせたボタンコンポーネント。
 // 汎用的に利用できるよう、種別やスタイルを指定できる。
 
-type Props = { // コンポーネントに渡されるプロパティの型定義
+/**
+ * IconButton で利用可能なプロパティ。
+ * アイコン名やラベル、押下時のコールバックなどを外部から細かく制御できる。
+ */
+type Props = {
   label: string; // ボタンに表示するテキストラベル
   icon: keyof typeof Ionicons.glyphMap; // 表示するIoniconsのアイコン名
   onPress?: () => void; // ボタンが押された際に呼ばれるコールバック
@@ -47,6 +51,7 @@ export default function IconButton({
       ]}
     >
       <View style={styles.content}>
+        {/* 指定された名前のアイコンを描画し、テキストとの間隔を確保 */}
         <Ionicons
           name={icon}
           size={20}

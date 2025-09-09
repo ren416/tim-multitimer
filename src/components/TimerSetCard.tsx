@@ -7,12 +7,15 @@ import IconButton from './IconButton';
 // タイマーセットの情報をカード形式で表示するコンポーネント。
 // 実行・編集・複製・削除などの操作ボタンを提供する。
 
+/**
+ * TimerSetCard で操作対象となるタイマーセット情報と各種ハンドラ。
+ */
 type Props = {
-  item: TimerSet;
-  onRun?: () => void;
-  onEdit?: () => void;
-  onDuplicate?: () => void;
-  onDelete?: () => void;
+  item: TimerSet; // 表示するタイマーセット本体
+  onRun?: () => void; // 実行ボタンが押されたときの処理
+  onEdit?: () => void; // 編集ボタンが押されたときの処理
+  onDuplicate?: () => void; // 複製ボタンが押されたときの処理
+  onDelete?: () => void; // 削除ボタンが押されたときの処理
 };
 
 export default function TimerSetCard({ item, onRun, onEdit, onDuplicate, onDelete }: Props) {

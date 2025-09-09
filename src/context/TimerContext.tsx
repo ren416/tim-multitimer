@@ -66,10 +66,10 @@ export type Settings = {
 
 // コンテキスト全体の状態構造
 type State = {
-  timerSets: TimerSet[];
-  history: HistoryEntry[];
-  settings: Settings;
-  hiddenTimerSetIds: string[];
+  timerSets: TimerSet[]; // 登録されているタイマーセット一覧
+  history: HistoryEntry[]; // タイマー実行の履歴
+  settings: Settings; // ユーザー設定
+  hiddenTimerSetIds: string[]; // ホームで非表示にするタイマーセットID
 };
 
 // Reducer で扱うアクション定義

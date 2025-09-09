@@ -10,6 +10,7 @@ export default function DataManagementScreen() {
   const { state, dispatch } = useTimerState();
   const navigation = useNavigation<any>();
 
+  // ヘッダー左に戻るボタンを配置し、設定画面へ戻れるようにする
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (

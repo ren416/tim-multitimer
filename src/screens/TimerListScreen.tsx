@@ -48,6 +48,7 @@ export default function TimerListScreen({ navigation }: any) { // タイマー�
           </Text>
         } // データが空のときの表示
       />
+      {/* 右下のフローティングボタン。新規タイマーセット作成画面へ遷移する */}
       <Pressable
         style={styles.fab}
         onPress={() => navigation.navigate('作成', { editId: undefined })}

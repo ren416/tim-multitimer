@@ -179,6 +179,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const handleAppActive = (): void => {
     if (!running || setEndAtRef.current == null) return;
     const now = Date.now();
+    // セット全体の終了予定時刻から現在時刻を差し引き、残りミリ秒を計算
     const totalRemainMs = setEndAtRef.current - now;
 
     if (totalRemainMs <= 0) {
