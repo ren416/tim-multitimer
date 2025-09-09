@@ -1,4 +1,5 @@
 // 型定義が提供されていないモジュール用の簡易型宣言
+// 実装の全てを網羅していないが、アプリで利用する範囲の型を補う
 declare module '@react-native-community/datetimepicker' {
   import * as React from 'react';
   export interface DateTimePickerProps {

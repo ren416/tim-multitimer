@@ -11,7 +11,7 @@ const unitSeconds: Record<RepeatIntervalUnit, number> = {
   hour: 3600,
   day: 86400,
   week: 7 * 86400,
-  year: 365 * 86400,
+  year: 365 * 86400, // うるう年は考慮しない簡易計算
 };
 
 /**
@@ -36,6 +36,9 @@ const ensurePermissions = async (): Promise<boolean> => {
 
 /**
  * 個別タイマー終了時の通知を設定する。
+ * JS のタイマーはバックグラウンドで止まる可能性があるため、
+ * OS に対して「n 秒後に通知を表示してほしい」と予約しておくことで
+ * アプリが閉じていてもユーザーへ終了を知らせることができる。
  * @param sec 何秒後に通知するか
  * @param timer 通知本文に使用するタイマー情報
  * @param withSound trueの場合は通知音を鳴らす
@@ -49,6 +52,8 @@ export const scheduleEndNotification = async (
     if (!(await ensurePermissions())) return null;
 
     if (Platform.OS === 'android') {
+      // Android では通知チャンネルごとに優先度などを設定する必要がある。
+      // importance を HIGH にすることでロック画面でも目立つよう表示される。
       await Notifications.setNotificationChannelAsync('timer', {
         name: 'Timer',
         importance: Notifications.AndroidImportance.HIGH,
@@ -73,7 +78,7 @@ export const scheduleEndNotification = async (
     const id = await Notifications.scheduleNotificationAsync({
       content,
       trigger: {
-        seconds: sec,
+        seconds: sec, // OS に対して n 秒後に通知するよう指示
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       },
     });

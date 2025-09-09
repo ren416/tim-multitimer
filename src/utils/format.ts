@@ -5,7 +5,7 @@
  */
 export const pad2 = (n: number): string => {
   const safe = Number.isFinite(n) ? n : 0;
-  return safe.toString().padStart(2, '0');
+  return safe.toString().padStart(2, '0'); // 例: 5 -> "05"
 };
 
 /**

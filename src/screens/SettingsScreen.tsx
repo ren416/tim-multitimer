@@ -38,6 +38,7 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
       </View>
       <View style={styles.section}>
+        {/* データエクスポートや削除を行う管理画面へのリンク */}
         <Pressable style={styles.row} onPress={() => navigation.navigate('データ管理')}>
           <Text style={styles.label}>データ管理</Text>
           <Ionicons name="chevron-forward-outline" size={20} color={Colors.subText} />

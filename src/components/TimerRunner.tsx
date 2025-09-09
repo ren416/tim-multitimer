@@ -158,7 +158,9 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     return total;
   };
 
-  // 1秒ごとに残り時間を計算し更新するインターバルをセットアップ
+  // 1秒ごとに残り時間を計算し更新するインターバルをセットアップ。
+  // JS の setInterval はバックグラウンドで止まるため、実際の終了時刻(endAtRef)
+  // との差から残り時間を算出し続ける。通知も毎秒更新してユーザーに進捗を提示する。
   const setupInterval = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
@@ -175,10 +177,13 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     }, 1000);
   };
 
-  // バックグラウンドから復帰した際に経過時間を補正
+  // バックグラウンドから復帰した際に経過時間を補正する。
+  // JS のインターバルは停止しているため、記録しておいた終了予定時刻から
+  // 実際にどれだけ時間が経過したかを計算し直す必要がある。
   const handleAppActive = (): void => {
     if (!running || setEndAtRef.current == null) return;
     const now = Date.now();
+    // セット全体の終了予定時刻から現在時刻を差し引き、残りミリ秒を計算
     const totalRemainMs = setEndAtRef.current - now;
 
     if (totalRemainMs <= 0) {
@@ -236,6 +241,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   };
 
   useEffect(() => {
+    // アプリがバックグラウンドからアクティブに戻ったタイミングで
+    // 時刻のズレを補正するため、AppState の変更を監視する。
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         handleAppActive();
@@ -246,6 +253,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   /**
    * 各タイマー終了通知をまとめてスケジュールする。
+   * アプリがバックグラウンドに入って JS タイマーが止まっても、
+   * OS からの通知で終了を知らせられるよう、開始時に全て予約しておく。
    * セット開始時に一度だけ呼び出す。
    */
   const scheduleAllNotifications = async (): Promise<void> => {
@@ -258,16 +267,18 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       const t = timerSet.timers[i];
       const d = getDuration(t);
       total += d;
-      if (t?.notify === false) continue;
+      if (t?.notify === false) continue; // 通知を無効化しているタイマーはスキップ
       const isLast = i === timerSet.timers.length - 1;
       const id = await scheduleEndNotification(total, t, isLast);
-      if (id) ids.push(id);
+      if (id) ids.push(id); // 後でキャンセルできるよう ID を保存
     }
     scheduledIdsRef.current = ids;
   };
 
   /**
    * 現在のタイマーを開始し1秒ごとのカウントダウンをセットする。
+   * endAtRef / setEndAtRef に「終了予定時刻」を記録しておき、
+   * バックグラウンド中でも正確な残り時間を算出できるようにする。
    */
   const start = () => {
     const curr = timerSet.timers[indexRef.current];
@@ -276,8 +287,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
     setRunning(true);
     remainingRef.current = duration;
     setRemaining(duration);
-    endAtRef.current = Date.now() + duration * 1000;
-    setEndAtRef.current = Date.now() + calcRemainingSetMs();
+    endAtRef.current = Date.now() + duration * 1000; // 現在タイマーの終了時刻
+    setEndAtRef.current = Date.now() + calcRemainingSetMs(); // セット全体の終了時刻
     try { soundRef.current?.stopAsync(); } catch {}
     setupInterval();
     updateTimerNotification(timerSet.name, curr.label ?? '', duration);
@@ -289,6 +300,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   /**
    * カウントダウンを一時停止する。再開時は start() を呼び出す。
+   * 停止した時点の残り時間から終了予定時刻を再計算して保持する。
    */
   const pause = () => {
     setRunning(false);
@@ -302,6 +314,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   /**
    * 現在のタイマーを初期残り時間にリセットする。
+   * running 中かどうかで終了予定時刻を再設定し、通知も更新する。
    */
   const resetCurrent = () => {
     if (!current) return;
@@ -373,6 +386,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       const d = getDuration(timerSet.timers[next]);
       remainingRef.current = d;
       setRemaining(d);
+      // スキップ後もバックグラウンド補正が効くように終了予定時刻を再計算
       endAtRef.current = running ? Date.now() + d * 1000 : null;
       if (running) {
         setEndAtRef.current = Date.now() + calcRemainingSetMs();
@@ -393,10 +407,11 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
   const cancel = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
-     endAtRef.current = null;
+    endAtRef.current = null;
     setEndAtRef.current = null;
     try { soundRef.current?.stopAsync(); } catch {}
     try { notifySoundRef.current?.stopAsync(); } catch {}
+    // 常駐通知および事前に予約した終了通知を全てクリア
     clearTimerNotification();
     cancelTimerSetNotification(scheduledIdsRef.current);
     scheduledIdsRef.current = [];
@@ -405,6 +420,8 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
 
   // Setup notification channel/category and handle actions
   useEffect(() => {
+    // 初回マウント時に通知チャンネル/カテゴリを作成し、
+    // 通知からの操作を受け取れるようハンドラを登録する。
     initTimerNotification();
     registerTimerActionHandler({
       onStart: () => startRef.current(),
@@ -412,6 +429,7 @@ export default function TimerRunner({ timerSet, onFinish, onCancel }: Props) {
       onReset: resetCurrent,
     });
     return () => {
+      // アンマウント時にはリスナーと通知を確実に解放してリークを防ぐ。
       unregisterTimerActionHandler();
       clearTimerNotification();
       cancelTimerSetNotification(scheduledIdsRef.current);

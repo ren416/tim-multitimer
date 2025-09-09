@@ -35,7 +35,14 @@ type Stage =
   | 'selectExisting'
   | 'existingTimers';
 
-type TimerInput = { id?: string; label?: string; min: string; sec: string; notify: boolean };
+// タイマー1件分の入力データを表す型
+type TimerInput = {
+  id?: string; // 既存タイマー編集時に使用する一意ID
+  label?: string; // タイマーの表示ラベル
+  min: string; // 入力された分
+  sec: string; // 入力された秒
+  notify: boolean; // 個別通知を行うかどうか
+};
 
 export default function CreateScreen({ route, navigation }: any) {
   const { state, dispatch } = useTimerState();

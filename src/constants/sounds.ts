@@ -30,6 +30,7 @@ export const SOUND_FILES: Record<string, any> = SOUND_OPTIONS.reduce(
     return acc;
   },
   {
+    // reduce の初期値として、区切り通知に使うビープ音を登録しておく
     beep: require('../../assets/sounds/beep.wav'), // 区切り通知用の短いビープ音
   } as Record<string, any>,
 );

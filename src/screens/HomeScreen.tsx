@@ -89,6 +89,7 @@ export default function HomeScreen() {
     }
   }, [selectedId, state.timerSets]);
 
+  // タイマーの表示スタイルを切り替えるためのモード一覧
   const modes: Array<'simple' | 'bar' | 'circle'> = ['simple', 'bar', 'circle'];
   const scrollRef = useRef<ScrollView>(null);
   // ページングされた表示モードのスクロール位置を監視

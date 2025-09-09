@@ -40,6 +40,7 @@ export default function RootTabs() {
     >
       {/* 主要なタブ画面の定義 */}
       <Tab.Screen name="ホーム" component={HomeScreen} />
+      {/* タブバーには表示しないモーダル画面 */}
       <Tab.Screen
         name="作成"
         component={CreateScreen}
@@ -48,6 +49,7 @@ export default function RootTabs() {
       <Tab.Screen name="タイマー一覧" component={TimerListScreen} />
       <Tab.Screen name="記録" component={HistoryScreen} />
       <Tab.Screen name="設定" component={SettingsScreen} />
+      {/* データエクスポートなどを行う隠し画面 */}
       <Tab.Screen
         name="データ管理"
         component={DataManagementScreen}
