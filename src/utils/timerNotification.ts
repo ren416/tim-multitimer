@@ -3,9 +3,12 @@ import { Platform } from 'react-native';
 import { formatHMS } from './format';
 
 // タイマーの進行状況を常駐通知として表示し、
-// 通知から開始・停止・リセットを行えるようにするユーティリティ。
+// 通知上のボタンから開始・停止・リセットといった操作を行えるようにするユーティリティ。
+// アプリがバックグラウンドにいる間もユーザーがタイマーを操作できるようにするのが目的。
 
+// 現在表示している通知の ID を保持しておく。更新時に前回の通知を消すために利用。
 let currentNotificationId: string | null = null;
+// 通知アクションからのイベント購読ハンドル。不要になったら解除する必要がある。
 let responseSub: Notifications.Subscription | null = null;
 
 /**
@@ -17,17 +20,20 @@ export const initTimerNotification = async (): Promise<void> => {
     return;
   }
 
+  // Android では通知チャンネルを事前に登録しておかないと通知が表示されない。
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('timer', {
       name: 'Timer',
       importance: Notifications.AndroidImportance.HIGH,
-      bypassDnd: true,
+      bypassDnd: true, // おやすみモードを無視して通知する
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
   }
 
+  // 通知を操作するための権限を要求
   await Notifications.requestPermissionsAsync();
 
+  // 通知上に表示するボタンのカテゴリを登録。これにより OS からのアクションを受け取れる。
   await Notifications.setNotificationCategoryAsync('TIMER_CONTROLS', [
     { identifier: 'START', buttonTitle: '開始' },
     { identifier: 'PAUSE', buttonTitle: '停止' },
@@ -48,6 +54,9 @@ type Handlers = {
 export const registerTimerActionHandler = (handlers: Handlers): void => {
   if (Platform.OS === 'web') return;
 
+  // 通知上のボタンが押されたときに呼び出されるリスナーを登録。
+  // このリスナーはアプリがバックグラウンドにあっても呼ばれるため、
+  // ユーザーが通知から直接タイマーを操作できる。
   responseSub = Notifications.addNotificationResponseReceivedListener((resp) => {
     const action = resp.actionIdentifier;
     if (action === 'START') handlers.onStart();
@@ -62,6 +71,8 @@ export const registerTimerActionHandler = (handlers: Handlers): void => {
 export const unregisterTimerActionHandler = (): void => {
   if (Platform.OS === 'web') return;
 
+  // コンポーネントのアンマウント時などにリスナーを解除し、
+  // メモリリークや不要なイベント発火を防ぐ。
   responseSub?.remove();
   responseSub = null;
 };
@@ -83,12 +94,16 @@ export const updateTimerNotification = async (
 
   const body = `${timerName} 残り ${formatHMS(remainingSec)}`;
 
+  // 既存の通知があれば一旦消してから新しい通知を出す。
+  // 同じ ID の通知を更新する API が無いため、この方法で擬似更新する。
   if (currentNotificationId) {
     try {
       await Notifications.dismissNotificationAsync(currentNotificationId);
     } catch {}
   }
 
+  // trigger:null を指定して即時表示し、sticky:true で常駐させる。
+  // これにより OS がアプリを停止しても通知は残り、操作ボタンも利用できる。
   currentNotificationId = await Notifications.scheduleNotificationAsync({
     content: {
       title: setName,
@@ -98,7 +113,7 @@ export const updateTimerNotification = async (
       android: {
         channelId: 'timer',
         priority: Notifications.AndroidNotificationPriority.MAX,
-        sticky: true,
+        sticky: true, // 常駐させる
         color: '#2196f3',
       },
     } as any,
@@ -114,6 +129,7 @@ export const clearTimerNotification = async (): Promise<void> => {
     return;
   }
 
+  // 表示中の通知があれば確実に消す。アプリ終了時などに呼び出される。
   if (currentNotificationId) {
     try {
       await Notifications.dismissNotificationAsync(currentNotificationId);
